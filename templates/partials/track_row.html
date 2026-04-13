@@ -1,0 +1,19 @@
+<tr id="track-{{ track.id }}" class="{% if track.selected_for_sync %}selected{% endif %}">
+  <td>
+    <button
+      hx-post="{{ url_for('main.toggle_track', track_id=track.id) }}"
+      hx-target="#track-{{ track.id }}"
+      hx-swap="outerHTML"
+      class="outline"
+    >
+      {% if track.selected_for_sync %}Selected{% else %}Select{% endif %}
+    </button>
+  </td>
+  <td>{{ track.title }}</td>
+  <td>{{ track.artist or '-' }}</td>
+  <td class="path">{{ track.path }}</td>
+</tr>
+
+{% if selected_count is defined %}
+  <span id="selected-count" hx-swap-oob="true">{{ selected_count }}</span>
+{% endif %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="grid">
+  <article>
+    <h2>Library</h2>
+    <form method="post" action="{{ url_for('main.scan_library') }}">
+      <label for="source_path">Source folder</label>
+      <input id="source_path" name="source_path" value="{{ music_root }}" />
+      <button type="submit">Scan Folder</button>
+    </form>
+  </article>
+
+  <article>
+    <h2>Sync</h2>
+    <p><strong id="selected-count">{{ selected_count }}</strong> selected tracks.</p>
+    <form method="post" action="{{ url_for('main.sync_mp3') }}">
+      <button type="submit">Sync to MP3</button>
+    </form>
+    <form method="post" action="{{ url_for('main.backup_library') }}">
+      <button type="submit" class="secondary">Back Up Library</button>
+    </form>
+  </article>
+</section>
+
+<section>
+  <article>
+    <h2>Known USB Devices</h2>
+    <form method="post" action="{{ url_for('main.detect_usb') }}">
+      <button type="submit" class="secondary">Detect Mounted USB Devices</button>
+    </form>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>UUID</th>
+            <th>Role</th>
+            <th>Mount</th>
+            <th>Last Seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for usb in usb_devices %}
+            <tr>
+              <td>{{ usb.label }}</td>
+              <td>{{ usb.device_uuid }}</td>
+              <td>
+                <form method="post" action="{{ url_for('main.update_usb_role', usb_id=usb.id) }}" class="inline-role-form">
+                  <select
+                    name="role"
+                    aria-label="Role for {{ usb.label }}"
+                    onchange="this.form.submit()"
+                  >
+                    {% for role in usb_roles %}
+                      <option value="{{ role }}" {% if usb.role == role %}selected{% endif %}>{{ role }}</option>
+                    {% endfor %}
+                  </select>
+                </form>
+              </td>
+              <td>{{ usb.mount_path or '-' }}</td>
+              <td>{{ usb.last_seen_at }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5">No USB devices registered yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section>
+  <article>
+    <h2>Track Library</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Sync</th>
+            <th>Title</th>
+            <th>Artist</th>
+            <th>Path</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for track in tracks %}
+            {% include "partials/track_row.html" %}
+          {% else %}
+            <tr>
+              <td colspan="4">No tracks indexed yet. Run a scan first.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+{% endblock %}
