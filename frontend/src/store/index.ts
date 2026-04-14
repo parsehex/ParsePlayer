@@ -25,6 +25,14 @@ interface FlashMessage {
   type: 'success' | 'error' | 'warning' | 'info';
 }
 
+interface JobProgress {
+  status: string;
+  message: string;
+  percentage: number;
+  completed: number;
+  total: number;
+}
+
 interface StoreState {
   tracks: Track[];
   allTrackCount: number;
@@ -40,6 +48,7 @@ interface StoreState {
   busyMessage: string;
   isLoading: boolean;
   filterQuery: string;
+  jobProgress: JobProgress | null;
 }
 
 export const store = reactive<StoreState>({
@@ -57,6 +66,7 @@ export const store = reactive<StoreState>({
   busyMessage: '',
   isLoading: false,
   filterQuery: '',
+  jobProgress: null,
 })
 
 export function addFlash(message: string, type: FlashMessage['type'] = 'success') {

@@ -43,10 +43,14 @@ import { store } from './store'
 
     <router-view />
 
-    <div v-if="store.busyMessage" id="busy-overlay" class="busy-overlay">
+    <div v-if="store.busyMessage || (store.jobProgress && store.jobProgress.status === 'running')" id="busy-overlay" class="busy-overlay">
       <div class="busy-panel" role="status" aria-live="polite" aria-atomic="true">
-        <span class="busy-spinner" aria-hidden="true"></span>
-        <p id="busy-text">{{ store.busyMessage }}</p>
+        <span v-if="!store.jobProgress || store.jobProgress.status !== 'running'" class="busy-spinner" aria-hidden="true"></span>
+        <p id="busy-text">{{ store.jobProgress && store.jobProgress.status === 'running' ? store.jobProgress.message : store.busyMessage }}</p>
+        <div v-if="store.jobProgress && store.jobProgress.status === 'running'" class="progress-container" style="margin-top: 1rem; width: 100%;">
+          <progress :value="store.jobProgress.percentage" max="100" style="width: 100%;"></progress>
+          <span style="display: block; text-align: center; font-size: 0.8rem; margin-top: 0.2rem;" v-if="store.jobProgress.total > 0">{{ store.jobProgress.completed }} / {{ store.jobProgress.total }}</span>
+        </div>
       </div>
     </div>
   </main>

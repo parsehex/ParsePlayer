@@ -1,3 +1,4 @@
+import threading
 from pathlib import Path
 from flask import Blueprint, current_app, jsonify, make_response, redirect, render_template, request, url_for
 
@@ -238,25 +239,39 @@ def detect_usb():
     return jsonify({"success": True, "message": f"Detected {len(devices)} USB partition(s).", "devices": services.fetch_usb_devices(db)})
 
 
+@bp.get("/api/actions/status")
+def get_job_status():
+    return jsonify(services.job_state)
+
+
 @bp.post("/api/actions/import-library-input")
 def import_library_input():
-    db = get_db()
-    success, message = services.run_import_library_input(db)
-    db.commit()
-    return jsonify({"success": success, "message": message})
+    if services.job_state["status"] == "running":
+        return jsonify({"success": False, "message": "A job is already running."}), 400
+    app = current_app._get_current_object()
+    thread = threading.Thread(target=services.run_import_library_input, args=(app,))
+    thread.daemon = True
+    thread.start()
+    return jsonify({"success": True, "message": "Import started..."})
 
 
 @bp.post("/api/actions/sync-mp3")
 def sync_mp3():
-    db = get_db()
-    success, message = services.run_sync_mp3(db)
-    db.commit()
-    return jsonify({"success": success, "message": message})
+    if services.job_state["status"] == "running":
+        return jsonify({"success": False, "message": "A job is already running."}), 400
+    app = current_app._get_current_object()
+    thread = threading.Thread(target=services.run_sync_mp3, args=(app,))
+    thread.daemon = True
+    thread.start()
+    return jsonify({"success": True, "message": "Sync started..."})
 
 
 @bp.post("/api/actions/backup-library")
 def backup_library():
-    db = get_db()
-    success, message = services.run_backup_library(db)
-    db.commit()
-    return jsonify({"success": success, "message": message})
+    if services.job_state["status"] == "running":
+        return jsonify({"success": False, "message": "A job is already running."}), 400
+    app = current_app._get_current_object()
+    thread = threading.Thread(target=services.run_backup_library, args=(app,))
+    thread.daemon = True
+    thread.start()
+    return jsonify({"success": True, "message": "Backup started..."})

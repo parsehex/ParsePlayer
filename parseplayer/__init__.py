@@ -15,8 +15,9 @@ def create_app() -> Flask:
 
     app = Flask(
         __name__,
-        template_folder=str(project_root / "templates"),
-        static_folder=str(project_root / "static"),
+        template_folder=str(project_root / "dist"),
+        static_folder=str(project_root / "dist"),
+        static_url_path="/",
     )
     app.config["SECRET_KEY"] = "dev"
     app.config["DATABASE"] = str(project_root / "data" / "parseplayer.db")

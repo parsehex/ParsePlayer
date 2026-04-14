@@ -2,19 +2,54 @@
 import { store, addFlash } from '../store'
 import axios from 'axios'
 
-async function handleAction(endpoint: string, message: string) {
-  store.busyMessage = message
+let pollInterval: number | null = null;
+
+async function pollProgress() {
   try {
-    const response = await axios.post(`/api/actions/${endpoint}`)
-    if (response.data.success) {
-      addFlash(response.data.message, 'success')
-    } else {
-      addFlash(response.data.message, 'error')
+    const resp = await axios.get('/api/actions/status');
+    const data = resp.data;
+    store.jobProgress = data;
+    if (data.status === 'completed' || data.status === 'error') {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      store.busyMessage = '';
+      if (data.status === 'completed') {
+        addFlash(data.message, 'success');
+      } else {
+        addFlash(data.message, 'error');
+      }
     }
   } catch (error) {
-    addFlash('Action failed.', 'error')
-  } finally {
-    store.busyMessage = ''
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+    store.busyMessage = '';
+    addFlash('Lost connection to server.', 'error');
+  }
+}
+
+async function handleAction(endpoint: string, message: string) {
+  store.busyMessage = message;
+  store.jobProgress = { status: 'running', message: message, percentage: 0, completed: 0, total: 0 };
+  
+  try {
+    const response = await axios.post(`/api/actions/${endpoint}`);
+    if (response.data.success) {
+      if (!pollInterval) {
+        pollInterval = window.setInterval(pollProgress, 1000);
+      }
+    } else {
+      addFlash(response.data.message, 'error');
+      store.busyMessage = '';
+      store.jobProgress = null;
+    }
+  } catch (error) {
+    addFlash('Action failed.', 'error');
+    store.busyMessage = '';
+    store.jobProgress = null;
   }
 }
 </script>

@@ -42,16 +42,20 @@ def fetch_enriched_tracks(db, music_root: str):
     rows = queries.get_all_tracks(db)
     return [enrich_track_for_display(row, music_root) for row in rows]
 
-def active_browse_from_request() -> tuple[str, str]:
-    """Read current browse scope from htmx current URL when available."""
-    current_url = request.headers.get("HX-Current-URL", "")
-    if not current_url:
-        return "", ""
+job_state = {
+    "status": "idle",
+    "message": "",
+    "percentage": 0,
+    "completed": 0,
+    "total": 0,
+}
 
-    query = parse_qs(urlparse(current_url).query)
-    artist = (query.get("artist", [""])[0] or "").strip()
-    album = (query.get("album", [""])[0] or "").strip()
-    return artist, album
+def set_job_state(status, message, percentage=0, completed=0, total=0):
+    job_state["status"] = status
+    job_state["message"] = message
+    job_state["percentage"] = percentage
+    job_state["completed"] = completed
+    job_state["total"] = total
 
 def fetch_usb_devices(db):
     rows = queries.get_all_usb_devices(db)
@@ -206,172 +210,223 @@ def build_track_browse_groups(
 
     return artist_groups, album_groups, filtered_tracks
 
-def run_import_library_input(db) -> tuple[bool, str]:
-    source_device = queries.get_usb_device_by_role(db, 'library_input')
-    if not source_device:
-        return False, "No USB marked as library_input. Detect devices and assign one."
+def run_import_library_input(app):
+    with app.app_context():
+        from .db import get_db
+        db = get_db()
+        set_job_state("running", "Initializing import...")
+        source_device = queries.get_usb_device_by_role(db, 'library_input')
+        if not source_device:
+            set_job_state("error", "No USB marked as library_input. Detect devices and assign one.")
+            return
 
-    device_identifier = source_device["device_uuid"]
-    was_mounted = bool((source_device["mount_path"] or "").strip())
-    raw_mount = source_device["mount_path"] or ""
+        device_identifier = source_device["device_uuid"]
+        was_mounted = bool((source_device["mount_path"] or "").strip())
+        raw_mount = source_device["mount_path"] or ""
 
-    if not raw_mount or not Path(raw_mount).is_dir():
-        raw_mount = mount_usb_by_identifier(device_identifier)
-        if not raw_mount:
-            return False, f"Could not mount '{source_device['label']}'. Is it still plugged in?"
-        queries.update_usb_device_mount(db, device_identifier, raw_mount, by_uuid=True)
+        if not raw_mount or not Path(raw_mount).is_dir():
+            raw_mount = mount_usb_by_identifier(device_identifier)
+            if not raw_mount:
+                set_job_state("error", f"Could not mount '{source_device['label']}'. Is it still plugged in?")
+                return
+            queries.update_usb_device_mount(db, device_identifier, raw_mount, by_uuid=True)
+            db.commit()
 
-    mount_path = Path(raw_mount)
-    if not mount_path.exists() or not mount_path.is_dir():
-        return False, f"Library input USB mount path is unavailable: {mount_path}"
+        mount_path = Path(raw_mount)
+        if not mount_path.exists() or not mount_path.is_dir():
+            set_job_state("error", f"Library input USB mount path is unavailable: {mount_path}")
+            return
 
-    library_root = Path(current_app.config["MUSIC_ROOT"])
-    library_root.mkdir(parents=True, exist_ok=True)
+        library_root = Path(app.config["MUSIC_ROOT"])
+        library_root.mkdir(parents=True, exist_ok=True)
 
-    copied_files = 0
-    try:
-        for source_file in mount_path.rglob("*"):
-            if not source_file.is_file() or source_file.suffix.lower() not in SUPPORTED_EXTENSIONS:
-                continue
+        set_job_state("running", "Scanning files on USB...")
+        source_files = [f for f in mount_path.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
+        total_files = len(source_files)
+        
+        if total_files == 0:
+            set_job_state("completed", "No supported music files found on USB.", 100, 0, 0)
+            return
 
-            relative_path = source_file.relative_to(mount_path)
-            target_file = library_root / relative_path
-            target_file.parent.mkdir(parents=True, exist_ok=True)
+        copied_files = 0
+        try:
+            for source_file in source_files:
+                relative_path = source_file.relative_to(mount_path)
+                target_file = library_root / relative_path
+                target_file.parent.mkdir(parents=True, exist_ok=True)
 
-            shutil.copy2(source_file, target_file)
-            copied_files += 1
+                shutil.copy2(source_file, target_file)
+                copied_files += 1
+                pct = int((copied_files / total_files) * 100)
+                set_job_state("running", f"Importing {source_file.name}...", pct, copied_files, total_files)
 
-        tracks = discover_tracks(library_root)
-        indexed = queries.upsert_tracks(db, tracks)
-        details = (
-            f"Imported {copied_files} file(s) from '{source_device['label']}' into '{library_root}'. "
-            f"Indexed {indexed} track record(s)."
-        )
-        queries.log_sync_run(db, "import_library_input", "completed", details)
-    except Exception as e:
-        logger.error(f"Error during import: {e}", exc_info=True)
-        return False, f"Error during import: {e}"
-    finally:
-        if not was_mounted:
-            unmount_usb_by_identifier(device_identifier)
-            queries.update_usb_device_mount(db, device_identifier, "", by_uuid=True)
+            set_job_state("running", "Indexing tracks in database...")
+            tracks = discover_tracks(library_root)
+            indexed = queries.upsert_tracks(db, tracks)
+            details = (
+                f"Imported {copied_files} file(s) from '{source_device['label']}' into '{library_root}'. "
+                f"Indexed {indexed} track record(s)."
+            )
+            queries.log_sync_run(db, "import_library_input", "completed", details)
+            db.commit()
+            set_job_state("completed", details, 100, copied_files, total_files)
+        except Exception as e:
+            logger.error(f"Error during import: {e}", exc_info=True)
+            set_job_state("error", f"Error during import: {e}")
+        finally:
+            if not was_mounted:
+                unmount_usb_by_identifier(device_identifier)
+                queries.update_usb_device_mount(db, device_identifier, "", by_uuid=True)
+                db.commit()
 
-    return True, details
+def run_backup_library(app):
+    with app.app_context():
+        from .db import get_db
+        db = get_db()
+        set_job_state("running", "Initializing backup...")
+        backup_device = queries.get_usb_device_by_role(db, 'backup')
+        if not backup_device:
+            set_job_state("error", "No USB marked as backup.")
+            return
 
-def run_backup_library(db) -> tuple[bool, str]:
-    backup_device = queries.get_usb_device_by_role(db, 'backup')
-    if not backup_device:
-        return False, "No USB marked as backup. Detect devices and assign one."
+        device_identifier = backup_device["device_uuid"]
+        was_mounted = bool((backup_device["mount_path"] or "").strip())
+        raw_mount = backup_device["mount_path"] or ""
 
-    device_identifier = backup_device["device_uuid"]
-    was_mounted = bool((backup_device["mount_path"] or "").strip())
-    raw_mount = backup_device["mount_path"] or ""
+        if not raw_mount or not Path(raw_mount).is_dir():
+            raw_mount = mount_usb_by_identifier(device_identifier)
+            if not raw_mount:
+                set_job_state("error", f"Could not mount '{backup_device['label']}'. Is it still plugged in?")
+                return
+            queries.update_usb_device_mount(db, device_identifier, raw_mount, by_uuid=True)
+            db.commit()
 
-    if not raw_mount or not Path(raw_mount).is_dir():
-        raw_mount = mount_usb_by_identifier(device_identifier)
-        if not raw_mount:
-            return False, f"Could not mount '{backup_device['label']}'. Is it still plugged in?"
-        queries.update_usb_device_mount(db, device_identifier, raw_mount, by_uuid=True)
+        mount_path = Path(raw_mount)
+        if not mount_path.exists() or not mount_path.is_dir():
+            set_job_state("error", f"Backup USB mount path is unavailable: {mount_path}")
+            return
 
-    mount_path = Path(raw_mount)
-    if not mount_path.exists() or not mount_path.is_dir():
-        return False, f"Backup USB mount path is unavailable: {mount_path}"
+        library_root = Path(app.config["MUSIC_ROOT"])
+        if not library_root.exists() or not library_root.is_dir():
+            set_job_state("error", f"Library source folder is unavailable: {library_root}")
+            return
 
-    library_root = Path(current_app.config["MUSIC_ROOT"])
-    if not library_root.exists() or not library_root.is_dir():
-        return False, f"Library source folder is unavailable: {library_root}"
+        backup_root = mount_path / "ParsePlayerLibraryBackup"
+        backup_root.mkdir(parents=True, exist_ok=True)
+        
+        set_job_state("running", "Scanning library files...")
+        source_files = [f for f in library_root.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS]
+        total_files = len(source_files)
 
-    backup_root = mount_path / "ParsePlayerLibraryBackup"
-    backup_root.mkdir(parents=True, exist_ok=True)
+        if total_files == 0:
+            set_job_state("completed", "No music files to backup.", 100, 0, 0)
+            return
 
-    copied_files = 0
-    try:
-        for source_file in library_root.rglob("*"):
-            if not source_file.is_file() or source_file.suffix.lower() not in SUPPORTED_EXTENSIONS:
-                continue
-
-            relative_path = source_file.relative_to(library_root)
-            target_file = backup_root / relative_path
-            target_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source_file, target_file)
-            copied_files += 1
-
-        details = (
-            f"Backed up {copied_files} file(s) from '{library_root}' to "
-            f"'{backup_device['label']}' at '{backup_root}'."
-        )
-        queries.log_sync_run(db, "backup_library", "completed", details)
-    except Exception as e:
-        logger.error(f"Error during backup: {e}", exc_info=True)
-        return False, f"Error during backup: {e}"
-    finally:
-        if not was_mounted:
-            unmount_ok = unmount_usb_by_identifier(device_identifier)
-            queries.update_usb_device_mount(db, device_identifier, "" if unmount_ok else raw_mount, by_uuid=True)
-
-    return True, details
-
-def run_sync_mp3(db) -> tuple[bool, str]:
-    mp3_device = queries.get_usb_device_by_role(db, 'mp3_player')
-    if not mp3_device:
-        return False, "No USB marked as mp3_player. Detect devices and assign one."
-
-    selected_count, selected_size_bytes = queries.get_selected_sync_stats(db)
-    if selected_count == 0:
-        return False, "No tracks selected for sync."
-
-    device_identifier = mp3_device["device_uuid"]
-    was_mounted = bool((mp3_device["mount_path"] or "").strip())
-    raw_mount = mp3_device["mount_path"] or ""
-
-    if not raw_mount or not Path(raw_mount).is_dir():
-        raw_mount = mount_usb_by_identifier(device_identifier)
-        if not raw_mount:
-            return False, f"Could not mount '{mp3_device['label']}'. Is it still plugged in?"
-        queries.update_usb_device_mount(db, device_identifier, raw_mount, by_uuid=True)
-
-    mount_path = Path(raw_mount)
-    if not mount_path.exists() or not mount_path.is_dir():
-        return False, f"MP3 player USB mount path is unavailable: {mount_path}"
-
-    sync_root = mount_path
-    library_root = Path(current_app.config["MUSIC_ROOT"])
-
-    queries.log_sync_run(db, "sync_mp3", "started", f"Starting sync of {selected_count} tracks.")
-    db.commit()
-
-    copied_files = 0
-    try:
-        selected_tracks = queries.get_selected_sync_tracks(db)
-        for track in selected_tracks:
-            source_file = Path(track["path"])
-            if not source_file.is_file():
-                continue
-
-            try:
+        copied_files = 0
+        try:
+            for source_file in source_files:
                 relative_path = source_file.relative_to(library_root)
-            except ValueError:
-                # If track path is not relative to library root
-                relative_path = Path(source_file.name)
+                target_file = backup_root / relative_path
+                target_file.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_file, target_file)
+                copied_files += 1
+                pct = int((copied_files / total_files) * 100)
+                set_job_state("running", f"Backing up {source_file.name}...", pct, copied_files, total_files)
 
-            target_file = sync_root / relative_path
-            target_file.parent.mkdir(parents=True, exist_ok=True)
+            details = (
+                f"Backed up {copied_files} file(s) from '{library_root}' to "
+                f"'{backup_device['label']}' at '{backup_root}'."
+            )
+            queries.log_sync_run(db, "backup_library", "completed", details)
+            db.commit()
+            set_job_state("completed", details, 100, copied_files, total_files)
+        except Exception as e:
+            logger.error(f"Error during backup: {e}", exc_info=True)
+            set_job_state("error", f"Error during backup: {e}")
+        finally:
+            if not was_mounted:
+                unmount_ok = unmount_usb_by_identifier(device_identifier)
+                queries.update_usb_device_mount(db, device_identifier, "" if unmount_ok else raw_mount, by_uuid=True)
+                db.commit()
 
-            shutil.copy2(source_file, target_file)
-            copied_files += 1
+def run_sync_mp3(app):
+    with app.app_context():
+        from .db import get_db
+        db = get_db()
+        set_job_state("running", "Initializing sync...")
+        mp3_device = queries.get_usb_device_by_role(db, 'mp3_player')
+        if not mp3_device:
+            set_job_state("error", "No USB marked as mp3_player.")
+            return
 
-        details = (
-            f"Synced {copied_files} of {selected_count} selected track(s) to "
-            f"'{mp3_device['label']}' at '{sync_root}'."
-        )
-        queries.log_sync_run(db, "sync_mp3", "completed", details)
-    except Exception as e:
-        logger.error(f"Error during MP3 sync: {e}", exc_info=True)
-        queries.log_sync_run(db, "sync_mp3", "failed", f"Failed: {e}")
-        return False, f"Error during MP3 sync: {e}"
-    finally:
-        if not was_mounted:
-            unmount_ok = unmount_usb_by_identifier(device_identifier)
-            queries.update_usb_device_mount(db, device_identifier, "" if unmount_ok else raw_mount, by_uuid=True)
+        selected_count, selected_size_bytes = queries.get_selected_sync_stats(db)
+        if selected_count == 0:
+            set_job_state("error", "No tracks selected for sync.")
+            return
 
-    return True, details
+        device_identifier = mp3_device["device_uuid"]
+        was_mounted = bool((mp3_device["mount_path"] or "").strip())
+        raw_mount = mp3_device["mount_path"] or ""
+
+        if not raw_mount or not Path(raw_mount).is_dir():
+            raw_mount = mount_usb_by_identifier(device_identifier)
+            if not raw_mount:
+                set_job_state("error", f"Could not mount '{mp3_device['label']}'. Is it still plugged in?")
+                return
+            queries.update_usb_device_mount(db, device_identifier, raw_mount, by_uuid=True)
+            db.commit()
+
+        mount_path = Path(raw_mount)
+        if not mount_path.exists() or not mount_path.is_dir():
+            set_job_state("error", f"MP3 player USB mount path is unavailable: {mount_path}")
+            return
+
+        sync_root = mount_path
+        library_root = Path(app.config["MUSIC_ROOT"])
+
+        queries.log_sync_run(db, "sync_mp3", "started", f"Starting sync of {selected_count} tracks.")
+        db.commit()
+
+        copied_files = 0
+        total_files = selected_count
+        try:
+            selected_tracks = queries.get_selected_sync_tracks(db)
+            for track in selected_tracks:
+                source_file = Path(track["path"])
+                if not source_file.is_file():
+                    total_files -= 1
+                    continue
+
+                try:
+                    relative_path = source_file.relative_to(library_root)
+                except ValueError:
+                    relative_path = Path(source_file.name)
+
+                target_file = sync_root / relative_path
+                target_file.parent.mkdir(parents=True, exist_ok=True)
+
+                shutil.copy2(source_file, target_file)
+                copied_files += 1
+                if total_files > 0:
+                    pct = int((copied_files / total_files) * 100)
+                else: 
+                    pct = 0
+                set_job_state("running", f"Syncing {source_file.name}...", pct, copied_files, total_files)
+
+            details = (
+                f"Synced {copied_files} of {selected_count} selected track(s) to "
+                f"'{mp3_device['label']}' at '{sync_root}'."
+            )
+            queries.log_sync_run(db, "sync_mp3", "completed", details)
+            db.commit()
+            set_job_state("completed", details, 100, copied_files, total_files)
+        except Exception as e:
+            logger.error(f"Error during MP3 sync: {e}", exc_info=True)
+            queries.log_sync_run(db, "sync_mp3", "failed", f"Failed: {e}")
+            db.commit()
+            set_job_state("error", f"Error during MP3 sync: {e}")
+        finally:
+            if not was_mounted:
+                unmount_ok = unmount_usb_by_identifier(device_identifier)
+                queries.update_usb_device_mount(db, device_identifier, "" if unmount_ok else raw_mount, by_uuid=True)
+                db.commit()
