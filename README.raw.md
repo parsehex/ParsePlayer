@@ -68,7 +68,7 @@ This is where I am now, since hardware is useless without software to run on it.
 Stack:
 
 - Python / Flask server
-- HTMX
+- ~~HTMX~~ Vue
 - Pico.css
 
 #### Web Interface
