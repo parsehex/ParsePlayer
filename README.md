@@ -1,6 +1,6 @@
 # ParsePlayer
 
-> Call this project "vibe-coded" if you wanna fight about it, but I call it "solo-pair-programmed".
+> Call this project "vibe-coded" if you wanna fight about it - I call it "solo-pair-programmed".
 >
 > Want to read my thoughts on the topic? (TODO link)
 
