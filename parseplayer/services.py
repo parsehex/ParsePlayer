@@ -52,6 +52,7 @@ def enrich_track_for_display(track_row, music_root: str):
     artist, album = derive_virtual_artist_album(track["path"], music_root)
     track["virtual_artist"] = artist
     track["virtual_album"] = album
+    track["size_human"] = format_bytes(track.get("size_bytes") or 0)
     return track
 
 def fetch_enriched_tracks(db, music_root: str):
@@ -127,10 +128,10 @@ def build_track_browse_groups(
 ) -> tuple[list[dict], list[dict], list]:
     music_root_path = Path(music_root).resolve()
     artist_totals: dict[str, dict[str, int | str]] = defaultdict(
-        lambda: {"label": "", "folder_path": "", "total": 0, "selected": 0}
+        lambda: {"label": "", "folder_path": "", "total": 0, "selected": 0, "size_bytes": 0, "selected_size_bytes": 0}
     )
     album_totals: dict[str, dict[str, int | str]] = defaultdict(
-        lambda: {"label": "", "folder_path": "", "total": 0, "selected": 0}
+        lambda: {"label": "", "folder_path": "", "total": 0, "selected": 0, "size_bytes": 0, "selected_size_bytes": 0}
     )
 
     normalized_rows: list[dict] = []
@@ -154,6 +155,10 @@ def build_track_browse_groups(
         artist_totals[artist_key]["folder_path"] = artist_folder_path
         artist_totals[artist_key]["total"] = int(artist_totals[artist_key]["total"]) + 1
         artist_totals[artist_key]["selected"] = int(artist_totals[artist_key]["selected"]) + selected
+        track_size = int(track.get("size_bytes") or 0)
+        artist_totals[artist_key]["size_bytes"] = int(artist_totals[artist_key]["size_bytes"]) + track_size
+        if selected:
+            artist_totals[artist_key]["selected_size_bytes"] = int(artist_totals[artist_key]["selected_size_bytes"]) + track_size
 
         album_key = parts[1] if len(parts) >= 3 else ""
         album_label = album_key
@@ -173,6 +178,9 @@ def build_track_browse_groups(
             album_totals[album_key]["folder_path"] = album_folder_path
             album_totals[album_key]["total"] = int(album_totals[album_key]["total"]) + 1
             album_totals[album_key]["selected"] = int(album_totals[album_key]["selected"]) + selected
+            album_totals[album_key]["size_bytes"] = int(album_totals[album_key]["size_bytes"]) + track_size
+            if selected:
+                album_totals[album_key]["selected_size_bytes"] = int(album_totals[album_key]["selected_size_bytes"]) + track_size
 
     artist_groups = [
         {
@@ -181,6 +189,8 @@ def build_track_browse_groups(
             "folder_path": data["folder_path"],
             "total": int(data["total"]),
             "selected": int(data["selected"]),
+            "size_human": format_bytes(int(data["size_bytes"])),
+            "selected_size_human": format_bytes(int(data["selected_size_bytes"])),
             "is_active": key == active_artist,
         }
         for key, data in artist_totals.items()
@@ -192,6 +202,8 @@ def build_track_browse_groups(
             "folder_path": data["folder_path"],
             "total": int(data["total"]),
             "selected": int(data["selected"]),
+            "size_human": format_bytes(int(data["size_bytes"])),
+            "selected_size_human": format_bytes(int(data["selected_size_bytes"])),
             "is_active": key == active_album,
         }
         for key, data in album_totals.items()

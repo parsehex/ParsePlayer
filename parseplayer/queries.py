@@ -3,7 +3,7 @@ import os
 def get_all_tracks(db):
     return db.execute(
         """
-        SELECT id, path, title, artist, selected_for_sync, updated_at
+        SELECT id, path, title, artist, selected_for_sync, updated_at, size_bytes
         FROM tracks
         ORDER BY selected_for_sync DESC, artist IS NULL, artist, title
         """
@@ -61,19 +61,20 @@ def bulk_update_tracks_selection(db, target: int, scope: str, value: str):
             (target, value, f"{value}/%"),
         )
 
-def upsert_tracks(db, tracks: list[dict[str, str | None]]) -> int:
+def upsert_tracks(db, tracks: list[dict[str, str | int | None]]) -> int:
     inserted = 0
     for track in tracks:
         result = db.execute(
             """
-            INSERT INTO tracks (path, title, artist)
-            VALUES (?, ?, ?)
+            INSERT INTO tracks (path, title, artist, size_bytes)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT(path) DO UPDATE SET
                 title = excluded.title,
                 artist = excluded.artist,
+                size_bytes = excluded.size_bytes,
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (track["path"], track["title"], track["artist"]),
+            (track["path"], track["title"], track["artist"], track.get("size_bytes", 0)),
         )
         if result.rowcount == 1:
             inserted += 1

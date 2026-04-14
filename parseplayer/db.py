@@ -29,6 +29,7 @@ def init_db() -> None:
             title TEXT NOT NULL,
             artist TEXT,
             selected_for_sync INTEGER NOT NULL DEFAULT 0,
+            size_bytes INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
@@ -53,6 +54,11 @@ def init_db() -> None:
         """
     )
     db.commit()
+    # Migrations: add columns that may be missing in older databases
+    existing = {row[1] for row in db.execute("PRAGMA table_info(tracks)").fetchall()}
+    if 'size_bytes' not in existing:
+        db.execute("ALTER TABLE tracks ADD COLUMN size_bytes INTEGER NOT NULL DEFAULT 0")
+        db.commit()
 
 
 def init_app(_app) -> None:

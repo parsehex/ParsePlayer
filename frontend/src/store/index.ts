@@ -17,6 +17,8 @@ interface Track {
   selected_for_sync: boolean;
   virtual_artist?: string;
   virtual_album?: string;
+  size_bytes?: number;
+  size_human?: string;
 }
 
 interface FlashMessage {
