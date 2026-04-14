@@ -19,7 +19,7 @@
       <header class="page-header">
         {% include "partials/logo.html" %}
         <div class="lcd-title-bar">
-          <span class="lcd-brand">ParsePlayer</span>
+          <span class="lcd-brand"><span class="brand-cap">P</span>arse<span class="brand-cap">P</span>layer</span>
           <span class="lcd-status">&#9654; &#9835; &#9646;&#9646;&#9646;</span>
         </div>
       </header>
@@ -35,6 +35,52 @@
       {% endwith %}
 
       {% block content %}{% endblock %}
+
+      <div id="busy-overlay" class="busy-overlay" hidden>
+        <div class="busy-panel" role="status" aria-live="polite" aria-atomic="true">
+          <span class="busy-spinner" aria-hidden="true"></span>
+          <p id="busy-text">Working... please keep this page open.</p>
+        </div>
+      </div>
     </main>
+
+    <script>
+      (function () {
+        const overlay = document.getElementById("busy-overlay");
+        const busyText = document.getElementById("busy-text");
+        if (!overlay || !busyText) {
+          return;
+        }
+
+        let isBusy = false;
+
+        document.addEventListener("submit", function (event) {
+          const form = event.target;
+          if (!(form instanceof HTMLFormElement)) {
+            return;
+          }
+
+          const message = form.getAttribute("data-busy-message");
+          if (!message) {
+            return;
+          }
+
+          if (isBusy) {
+            event.preventDefault();
+            return;
+          }
+
+          isBusy = true;
+          busyText.textContent = message;
+          overlay.hidden = false;
+          document.body.classList.add("is-busy");
+
+          const submitButtons = form.querySelectorAll("button[type='submit'], input[type='submit']");
+          submitButtons.forEach(function (button) {
+            button.disabled = true;
+          });
+        });
+      })();
+    </script>
   </body>
 </html>

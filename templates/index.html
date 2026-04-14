@@ -1,33 +1,49 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="grid">
-  <article>
-    <h2>Library</h2>
-    <form method="post" action="{{ url_for('main.import_library_input') }}">
-      <button type="submit" class="secondary">Import From Library USB</button>
-    </form>
-    <form method="post" action="{{ url_for('main.scan_library') }}">
-      <label for="source_path">Source folder</label>
-      <input id="source_path" name="source_path" value="{{ music_root }}" />
-      <button type="submit">Scan Folder</button>
-    </form>
+<section class="dashboard-grid">
+  <article class="dashboard-card compact-card">
+    <div class="section-header">
+      <h2>Library</h2>
+    </div>
+    <div class="action-stack compact-actions">
+      <form
+        method="post"
+        action="{{ url_for('main.import_library_input') }}"
+        data-busy-message="Importing music from USB. This can take a while for large libraries..."
+      >
+        <button type="submit" class="secondary">Import From USB</button>
+      </form>
+      <form method="post" action="{{ url_for('main.scan_library') }}" class="scan-form compact-form">
+        <label for="source_path">Source Folder</label>
+        <div class="inline-field-row">
+          <input id="source_path" name="source_path" value="{{ music_root }}" />
+          <button type="submit">Scan</button>
+        </div>
+      </form>
+    </div>
   </article>
 
-  <article>
-    <h2>Sync</h2>
-    <p><strong id="selected-count">{{ selected_count }}</strong> selected tracks.</p>
-    <form method="post" action="{{ url_for('main.sync_mp3') }}">
-      <button type="submit">Sync to MP3</button>
-    </form>
-    <form method="post" action="{{ url_for('main.backup_library') }}">
-      <button type="submit" class="secondary">Back Up Library</button>
-    </form>
+  <article class="dashboard-card compact-card">
+    <div class="section-header">
+      <h2>Sync</h2>
+    </div>
+    <p class="sync-summary"><strong id="selected-count">{{ selected_count }}</strong> tracks selected</p>
+    <div class="action-stack compact-actions">
+      <form method="post" action="{{ url_for('main.sync_mp3') }}">
+        <button type="submit">Sync to MP3</button>
+      </form>
+      <form
+        method="post"
+        action="{{ url_for('main.backup_library') }}"
+        data-busy-message="Backing up your library to USB. Keep this page open until it completes..."
+      >
+        <button type="submit" class="secondary">Back Up Library</button>
+      </form>
+    </div>
   </article>
-</section>
 
-<section>
-  <article>
+  <article class="dashboard-card compact-card">
     <div class="section-header">
       <h2>USB Devices</h2>
       <form method="post" action="{{ url_for('main.detect_usb') }}">
@@ -35,23 +51,23 @@
       </form>
     </div>
 
-    <div class="table-wrap">
-      <table>
+    <div class="table-wrap compact-table-wrap">
+      <table class="compact-table">
         <thead>
           <tr>
-            <th>Label</th>
-            <th>UUID</th>
+            <th>Device</th>
             <th>Role</th>
             <th>Mount</th>
-            <th>Last Seen</th>
-            <th>Actions</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {% for usb in usb_devices %}
             <tr>
-              <td>{{ usb.label }}</td>
-              <td>{{ usb.device_uuid }}</td>
+              <td>
+                <strong>{{ usb.label }}</strong>
+                <small>{{ usb.device_uuid }}</small>
+              </td>
               <td>
                 <form method="post" action="{{ url_for('main.update_usb_role', usb_id=usb.id) }}" class="inline-role-form">
                   <select
@@ -65,8 +81,7 @@
                   </select>
                 </form>
               </td>
-              <td>{{ usb.mount_path or '-' }}</td>
-              <td>{{ usb.last_seen_at }}</td>
+              <td class="mount-cell">{{ usb.mount_path or 'Not mounted' }}</td>
               <td>
                 {% if usb.mount_path %}
                   <form method="post" action="{{ url_for('main.unmount_usb', usb_id=usb.id) }}" class="inline-action-form">
@@ -81,7 +96,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="6">No USB devices registered yet.</td>
+              <td colspan="4">No USB devices registered yet.</td>
             </tr>
           {% endfor %}
         </tbody>

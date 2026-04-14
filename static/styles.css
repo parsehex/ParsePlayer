@@ -126,11 +126,18 @@ main.container {
 
 .lcd-brand {
   font-family: 'VT323', monospace;
-  font-size: 2rem;
+  font-size: 1.7rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--lcd-text);
   line-height: 1.2;
+}
+
+.brand-cap {
+  display: inline-block;
+  font-size: 1.38em;
+  line-height: 0.8;
+  transform: translateY(0.03em);
 }
 
 .lcd-status {
@@ -223,4 +230,145 @@ td.path {
   padding: 0.1rem 0.65rem;
   font-size: 0.9rem;
   margin: 0;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.dashboard-card {
+  min-width: 0;
+}
+
+.compact-card {
+  padding: 0.85rem 1rem 1rem;
+}
+
+.compact-card .section-header {
+  margin-bottom: 0.6rem;
+}
+
+.compact-actions {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.compact-actions form,
+.compact-form {
+  margin: 0;
+}
+
+.compact-actions button,
+.inline-field-row button {
+  margin: 0;
+}
+
+.scan-form label {
+  margin-bottom: 0.2rem;
+}
+
+.inline-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.inline-field-row input {
+  margin-bottom: 0;
+}
+
+.sync-summary {
+  margin: 0 0 0.65rem;
+  color: var(--lcd-dim);
+}
+
+.compact-table-wrap {
+  max-height: 18rem;
+}
+
+.compact-table {
+  margin-bottom: 0;
+}
+
+.compact-table th,
+.compact-table td {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  vertical-align: middle;
+}
+
+.compact-table td strong,
+.compact-table td small {
+  display: block;
+}
+
+.compact-table td small {
+  color: var(--lcd-dim);
+  font-size: 0.8em;
+  word-break: break-all;
+}
+
+.mount-cell {
+  font-size: 0.88em;
+  color: var(--lcd-dim);
+  word-break: break-all;
+}
+
+/* ── Busy overlay for long-running actions ── */
+.busy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 14, 30, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.busy-panel {
+  min-width: min(90vw, 34rem);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--lcd-border);
+  border-radius: 0.35rem;
+  background: rgba(184, 216, 232, 0.95);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.busy-panel p {
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.busy-spinner {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 999px;
+  border: 2px solid var(--lcd-border);
+  border-top-color: var(--lcd-text);
+  animation: busy-spin 0.8s linear infinite;
+}
+
+@keyframes busy-spin {
+  to { transform: rotate(360deg); }
+}
+
+body.is-busy {
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lcd-title-bar {
+    align-items: center;
+  }
 }
