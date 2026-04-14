@@ -11,6 +11,7 @@ Follow along and I'll try to explain.
 I found this ~20-year-old **RCA `PEARL`** of mine recently.
 
 It's missing the USB cover and the battery cover but the little device is still A-Okay & Good-to-go and Linux/Kubuntu was happy to mount it just like any other USB Drive.
+
 > Cool huh?
 
 ### It definitely sucks a bit though - `Pain Points`
@@ -44,7 +45,7 @@ It's weird to say, but everytime I set this player to Repeat One feels less heav
 
 > I just want to keep listening to this song.
 >
-> I don't want to wonder if *`My Algorithm`* is going to change as a result.
+> I don't want to wonder if _`My Algorithm`_ is going to change as a result.
 
 ## What does this add up to?
 
@@ -58,11 +59,17 @@ Obviously, my ultimate goal is to reach a **Portable** version which replaces th
 
 I do have a few rPi models, so I'm starting with a Raspberry Pi 4 B as a base, and after thinking it over for a short time I realized that the **Desktop** version is the start here.
 
-> Hey, battery banks exist, so it *can* be portable technically.
+> Hey, battery banks exist, so it _can_ be portable technically.
 
 ### The Software
 
 This is where I am now, since hardware is useless without software to run on it.
+
+Stack:
+
+- Python / Flask server
+- HTMX
+- Pico.css
 
 #### Web Interface
 
