@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 from collections import defaultdict
 from urllib.parse import parse_qs, urlparse
+import os
 
 from flask import Blueprint, current_app, flash, make_response, redirect, render_template, request, url_for
 import json
@@ -67,7 +68,7 @@ def _active_browse_from_request() -> tuple[str, str]:
 
 def _fetch_usb_devices():
     db = get_db()
-    return db.execute(
+    rows = db.execute(
         """
         SELECT id, label, device_uuid, mount_path, role, last_seen_at
         FROM usb_devices
@@ -76,11 +77,65 @@ def _fetch_usb_devices():
         """
     ).fetchall()
 
+    live_lookup: dict[str, dict[str, str]] = {}
+    try:
+        for item in detect_usb_partitions():
+            live_lookup[item["device_uuid"]] = item
+    except RuntimeError:
+        live_lookup = {}
+
+    devices: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        live = live_lookup.get(item["device_uuid"])
+        if live:
+            item["label"] = live.get("display_name") or live.get("label") or item["label"]
+            item["mount_path"] = live.get("mount_path") or item["mount_path"]
+            item["device_path"] = live.get("device_path") or item["device_uuid"]
+            item["size_human"] = live.get("size_human") or "-"
+            item["is_connected"] = True
+        else:
+            item["device_path"] = item["device_uuid"] if str(item["device_uuid"]).startswith("/dev/") else "-"
+            item["size_human"] = "-"
+            item["is_connected"] = False
+
+        uuid_text = str(item["device_uuid"])
+        if uuid_text.startswith("/dev/") or len(uuid_text) <= 14:
+            item["uuid_short"] = uuid_text
+        else:
+            item["uuid_short"] = f"{uuid_text[:8]}...{uuid_text[-4:]}"
+        devices.append(item)
+
+    return devices
+
 
 def _fetch_sync_count() -> int:
+    count, _size_bytes = _fetch_selected_sync_stats()
+    return count
+
+
+def _fetch_selected_sync_stats() -> tuple[int, int]:
     db = get_db()
-    row = db.execute("SELECT COUNT(*) AS count FROM tracks WHERE selected_for_sync = 1").fetchone()
-    return int(row["count"])
+    rows = db.execute("SELECT path FROM tracks WHERE selected_for_sync = 1").fetchall()
+    total_bytes = 0
+    for row in rows:
+        try:
+            total_bytes += os.path.getsize(row["path"])
+        except OSError:
+            continue
+    return len(rows), total_bytes
+
+
+def _format_bytes(byte_count: int) -> str:
+    size = float(byte_count)
+    units = ["B", "KB", "MB", "GB", "TB"]
+    index = 0
+    while size >= 1024 and index < len(units) - 1:
+        size /= 1024
+        index += 1
+    if index == 0:
+        return f"{int(size)} {units[index]}"
+    return f"{size:.1f} {units[index]}"
 
 
 def _upsert_tracks(db, tracks: list[dict[str, str | None]]) -> int:
@@ -226,6 +281,7 @@ def index():
         active_artist,
         active_album,
     )
+    selected_count, selected_size_bytes = _fetch_selected_sync_stats()
     return render_template(
         "index.html",
         tracks=tracks,
@@ -235,9 +291,22 @@ def index():
         active_artist=active_artist,
         active_album=active_album,
         usb_devices=_fetch_usb_devices(),
-        selected_count=_fetch_sync_count(),
+        selected_count=selected_count,
+        selected_size_human=_format_bytes(selected_size_bytes),
         music_root=music_root,
         usb_roles=USB_ROLES,
+    )
+
+
+@bp.get("/settings")
+def settings():
+    music_root = current_app.config["MUSIC_ROOT"]
+    selected_count, selected_size_bytes = _fetch_selected_sync_stats()
+    return render_template(
+        "settings.html",
+        music_root=music_root,
+        selected_count=selected_count,
+        selected_size_human=_format_bytes(selected_size_bytes),
     )
 
 
@@ -252,6 +321,9 @@ def scan_library():
 
     db.commit()
     flash(f"Scanned {len(tracks)} files from {source_path}. Added or updated {inserted} tracks.", "success")
+    return_to = request.form.get("return_to", "main.index").strip()
+    if return_to == "main.settings":
+        return redirect(url_for("main.settings"))
     return redirect(url_for("main.index"))
 
 
@@ -274,18 +346,28 @@ def toggle_track(track_id: int):
         (track_id,),
     ).fetchone()
     track = _enrich_track_for_display(track_row)
-    selected_count = _fetch_sync_count()
     active_artist, active_album = _active_browse_from_request()
+    all_tracks = _fetch_tracks()
+    artist_groups, album_groups, tracks = _build_track_browse_groups(
+        all_tracks,
+        current_app.config["MUSIC_ROOT"],
+        active_artist,
+        active_album,
+    )
+    selected_count, selected_size_bytes = _fetch_selected_sync_stats()
     response = make_response(
         render_template(
-            "partials/track_row.html",
+            "partials/track_toggle_response.html",
             track=track,
             active_artist=active_artist,
             active_album=active_album,
+            selected_count=selected_count,
+            selected_size_human=_format_bytes(selected_size_bytes),
+            artist_groups=artist_groups,
+            album_groups=album_groups,
+            tracks=tracks,
+            all_track_count=len(all_tracks),
         )
-    )
-    response.headers["HX-Trigger"] = json.dumps(
-        {"trackSelectionChanged": {"selectedCount": selected_count}}
     )
     return response
 

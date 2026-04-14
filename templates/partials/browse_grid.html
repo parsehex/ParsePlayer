@@ -1,0 +1,78 @@
+<div id="browse-grid" class="browse-grid">
+  <section class="browse-card">
+    <h3>Artists (Folder Level)</h3>
+    <div class="browse-list">
+      {% for group in artist_groups %}
+        <article class="browse-item {% if group.is_active %}browse-item-active{% endif %}">
+          <div class="browse-label">
+            <strong>{{ group.label }}</strong>
+            <small>{{ group.selected }}/{{ group.total }} selected</small>
+          </div>
+          <div class="browse-actions">
+            <form method="get" action="{{ url_for('main.index') }}" hx-push-url="true">
+              <input type="hidden" name="artist" value="{{ group.key }}" />
+              <button type="submit" class="outline">Browse</button>
+            </form>
+            <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+              <input type="hidden" name="scope" value="folder" />
+              <input type="hidden" name="value" value="{{ group.folder_path }}" />
+              <input type="hidden" name="action" value="select" />
+              <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+              <input type="hidden" name="return_album" value="{{ active_album }}" />
+              <button type="submit" class="outline">Select</button>
+            </form>
+            <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+              <input type="hidden" name="scope" value="folder" />
+              <input type="hidden" name="value" value="{{ group.folder_path }}" />
+              <input type="hidden" name="action" value="clear" />
+              <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+              <input type="hidden" name="return_album" value="{{ active_album }}" />
+              <button type="submit" class="secondary outline">Clear</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="browse-empty">No artist folders indexed yet.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="browse-card">
+    <h3>Albums (Within Artist)</h3>
+    <div class="browse-list">
+      {% for group in album_groups %}
+        <article class="browse-item {% if group.is_active %}browse-item-active{% endif %}">
+          <div class="browse-label">
+            <strong>{{ group.label }}</strong>
+            <small>{{ group.selected }}/{{ group.total }} selected</small>
+          </div>
+          <div class="browse-actions">
+            <form method="get" action="{{ url_for('main.index') }}" hx-push-url="true">
+              <input type="hidden" name="artist" value="{{ active_artist }}" />
+              <input type="hidden" name="album" value="{{ group.key }}" />
+              <button type="submit" class="outline">Browse</button>
+            </form>
+            <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+              <input type="hidden" name="scope" value="folder" />
+              <input type="hidden" name="value" value="{{ group.folder_path }}" />
+              <input type="hidden" name="action" value="select" />
+              <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+              <input type="hidden" name="return_album" value="{{ active_album }}" />
+              <button type="submit" class="outline">Select</button>
+            </form>
+            <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+              <input type="hidden" name="scope" value="folder" />
+              <input type="hidden" name="value" value="{{ group.folder_path }}" />
+              <input type="hidden" name="action" value="clear" />
+              <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+              <input type="hidden" name="return_album" value="{{ active_album }}" />
+              <button type="submit" class="secondary outline">Clear</button>
+            </form>
+          </div>
+        </article>
+      {% else %}
+        <p class="browse-empty">Select an artist folder to browse albums.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>

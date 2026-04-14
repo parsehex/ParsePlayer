@@ -234,9 +234,17 @@ td.path {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(14rem, 0.68fr) minmax(0, 1.32fr);
   gap: 0.9rem;
   align-items: start;
+}
+
+.library-sync-card {
+  grid-column: 1;
+}
+
+.usb-dashboard-card {
+  grid-column: 2;
 }
 
 .dashboard-card {
@@ -247,6 +255,10 @@ td.path {
   padding: 0.85rem 1rem 1rem;
 }
 
+.library-sync-card {
+  padding: 0.62rem 0.78rem 0.72rem;
+}
+
 .compact-card .section-header {
   margin-bottom: 0.6rem;
 }
@@ -254,6 +266,10 @@ td.path {
 .compact-actions {
   display: grid;
   gap: 0.6rem;
+}
+
+.library-sync-card .compact-actions {
+  gap: 0.42rem;
 }
 
 .compact-actions form,
@@ -286,6 +302,20 @@ td.path {
   color: var(--lcd-dim);
 }
 
+.library-sync-card .sync-summary {
+  margin: 0 0 0.45rem;
+}
+
+.library-sync-card .compact-actions button {
+  padding-top: 0.42rem;
+  padding-bottom: 0.42rem;
+}
+
+.summary-sep {
+  opacity: 0.6;
+  margin: 0 0.25rem;
+}
+
 .compact-table-wrap {
   max-height: 18rem;
 }
@@ -309,17 +339,78 @@ td.path {
 .compact-table td small {
   color: var(--lcd-dim);
   font-size: 0.8em;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.usb-dashboard-card .compact-table th,
+.usb-dashboard-card .compact-table td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.usb-dashboard-card .compact-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.usb-col-device {
+  width: 34%;
+}
+
+.usb-col-size {
+  width: 10%;
+}
+
+.usb-col-role {
+  width: 18%;
+}
+
+.usb-col-mount {
+  width: 22%;
+}
+
+.usb-col-action {
+  width: 16%;
 }
 
 .mount-cell {
   font-size: 0.88em;
   color: var(--lcd-dim);
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.usb-device-cell small {
+  line-height: 1.2;
+}
+
+.usb-mount-cell {
+  min-width: 0;
+}
+
+.usb-dashboard-card .inline-role-form select {
+  width: 100%;
+  min-width: 0;
+}
+
+.usb-dashboard-card .inline-action-form button {
+  width: 100%;
+  min-width: 0;
+  padding-left: 0.3rem;
+  padding-right: 0.3rem;
 }
 
 .library-panel {
   padding-top: 0.95rem;
+}
+
+.settings-panel {
+  padding-top: 0.95rem;
+}
+
+.settings-form {
+  margin-top: 0.35rem;
 }
 
 .library-header {
@@ -586,6 +677,11 @@ body.is-busy {
 @media (max-width: 900px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .library-sync-card,
+  .usb-dashboard-card {
+    grid-column: auto;
   }
 
   .lcd-title-bar {
