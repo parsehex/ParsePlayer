@@ -184,6 +184,18 @@ def update_usb_role(usb_id: int):
     return jsonify({"success": True, "message": f"Updated '{usb['label']}' role to '{role}'."})
 
 
+@bp.delete("/api/usb/<int:usb_id>")
+def delete_usb(usb_id: int):
+    db = get_db()
+    usb = queries.get_usb_device_by_id(db, usb_id)
+    if usb is None:
+        return jsonify({"success": False, "message": "USB device not found."}), 404
+        
+    queries.delete_usb_device(db, usb_id)
+    db.commit()
+    return jsonify({"success": True, "message": f"Removed '{usb['label']}' from history."})
+
+
 @bp.post("/api/usb/<int:usb_id>/mount")
 def mount_usb(usb_id: int):
     db = get_db()

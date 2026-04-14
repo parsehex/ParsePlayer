@@ -50,6 +50,21 @@ async function handleMount(usbId: number, action: 'mount' | 'unmount') {
     addFlash(`Failed to ${action} device.`, 'error')
   }
 }
+
+async function removeUsb(usbId: number) {
+  if (!confirm('Remove this device from history?')) return
+  try {
+    const response = await axios.delete(`/api/usb/${usbId}`)
+    if (response.data.success) {
+      addFlash(response.data.message, 'success')
+      store.usbDevices = store.usbDevices.filter(d => d.id !== usbId)
+    } else {
+      addFlash(response.data.message, 'error')
+    }
+  } catch (error) {
+    addFlash('Failed to remove device.', 'error')
+  }
+}
 </script>
 
 <template>
@@ -99,9 +114,10 @@ async function handleMount(usbId: number, action: 'mount' | 'unmount') {
               <span v-else-if="usb.is_connected">Not mounted</span>
               <span v-else>Disconnected</span>
             </td>
-            <td>
-              <button v-if="usb.mount_path" @click="handleMount(usb.id, 'unmount')" class="secondary outline">Unmount</button>
-              <button v-else @click="handleMount(usb.id, 'mount')" :disabled="!usb.is_connected" class="outline">Mount</button>
+            <td class="usb-action-cell">
+              <button v-if="usb.mount_path" @click="handleMount(usb.id, 'unmount')" class="secondary outline pulse">Unmount</button>
+              <button v-else-if="usb.is_connected" @click="handleMount(usb.id, 'mount')" class="primary outline">Mount</button>
+              <button v-else @click="removeUsb(usb.id)" class="error outline">Remove</button>
             </td>
           </tr>
           <tr v-if="store.usbDevices.length === 0">

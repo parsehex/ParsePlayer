@@ -106,7 +106,10 @@ def get_usb_device_by_id(db, usb_id: int):
     return db.execute("SELECT id, label, device_uuid, mount_path, role FROM usb_devices WHERE id = ?", (usb_id,)).fetchone()
 
 def get_usb_device_by_role(db, role: str):
-    return db.execute("SELECT id, label, device_uuid, mount_path FROM usb_devices WHERE role = ? LIMIT 1", (role,)).fetchone()
+    return db.execute(
+        "SELECT id, label, device_uuid, mount_path FROM usb_devices WHERE role = ? ORDER BY last_seen_at DESC LIMIT 1",
+        (role,)
+    ).fetchone()
 
 def upsert_usb_device(db, label: str, device_uuid: str, mount_path: str, role: str):
     db.execute(
@@ -167,3 +170,6 @@ def log_sync_run(db, action: str, status: str, details: str):
         "INSERT INTO sync_runs (action, status, details) VALUES (?, ?, ?)",
         (action, status, details),
     )
+
+def delete_usb_device(db, usb_id: int):
+    db.execute("DELETE FROM usb_devices WHERE id = ?", (usb_id,))

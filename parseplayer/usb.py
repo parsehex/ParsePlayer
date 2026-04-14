@@ -73,12 +73,27 @@ def mount_usb_by_identifier(identifier: str) -> str:
         return ""
     if mount_path:
         return mount_path  # already mounted
-    subprocess.run(
-        ["pmount", device_path],
+        
+    result = subprocess.run(
+        ["udisksctl", "mount", "-b", device_path, "--no-user-interaction"],
         check=False,
         capture_output=True,
         text=True,
     )
+    
+    import re
+    if result.returncode != 0:
+        # Check if already mounted
+        match = re.search(r"is already mounted at [`']([^']+)'", result.stderr)
+        if match:
+            return match.group(1).strip()
+        return ""
+        
+    # Extract from stdout to avoid lsblk race condition
+    match = re.search(r"Mounted .* at (.*)", result.stdout)
+    if match:
+        return match.group(1).strip()
+        
     _, new_mount = _device_path_for_identifier(identifier)
     return new_mount
 
@@ -91,12 +106,19 @@ def unmount_usb_by_identifier(identifier: str) -> bool:
     if not mount_path:
         return True  # already unmounted
     result = subprocess.run(
-        ["pumount", device_path],
+        ["udisksctl", "unmount", "-b", device_path, "--no-user-interaction"],
         check=False,
         capture_output=True,
         text=True,
     )
-    return result.returncode == 0
+    
+    if result.returncode == 0:
+        return True
+        
+    if "is not mounted" in result.stderr:
+        return True
+        
+    return False
 
 
 def detect_usb_partitions() -> list[dict[str, str]]:

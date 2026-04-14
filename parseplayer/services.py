@@ -13,6 +13,22 @@ from .usb import detect_usb_partitions, mount_usb_by_identifier, unmount_usb_by_
 
 logger = logging.getLogger(__name__)
 
+def _file_needs_update(src: Path, dst: Path) -> bool:
+    if not dst.exists() or not dst.is_file():
+        return True
+    try:
+        st_src = src.stat()
+        st_dst = dst.stat()
+        if st_src.st_size != st_dst.st_size:
+            return True
+        # FAT32 has a 2-second resolution for modification timestamps
+        if abs(st_src.st_mtime - st_dst.st_mtime) > 2:
+            return True
+        return False
+    except OSError:
+        return True
+
+
 def derive_virtual_artist_album(track_path: str, music_root: str) -> tuple[str, str]:
     root = Path(music_root).resolve()
     path = Path(track_path).resolve()
@@ -248,28 +264,32 @@ def run_import_library_input(app):
             set_job_state("completed", "No supported music files found on USB.", 100, 0, 0)
             return
 
-        copied_files = 0
+        processed_files = 0
+        actually_copied = 0
         try:
             for source_file in source_files:
                 relative_path = source_file.relative_to(mount_path)
                 target_file = library_root / relative_path
                 target_file.parent.mkdir(parents=True, exist_ok=True)
 
-                shutil.copy2(source_file, target_file)
-                copied_files += 1
-                pct = int((copied_files / total_files) * 100)
-                set_job_state("running", f"Importing {source_file.name}...", pct, copied_files, total_files)
+                if _file_needs_update(source_file, target_file):
+                    shutil.copy2(source_file, target_file)
+                    actually_copied += 1
+                
+                processed_files += 1
+                pct = int((processed_files / total_files) * 100)
+                set_job_state("running", f"Importing {source_file.name}...", pct, processed_files, total_files)
 
             set_job_state("running", "Indexing tracks in database...")
             tracks = discover_tracks(library_root)
             indexed = queries.upsert_tracks(db, tracks)
             details = (
-                f"Imported {copied_files} file(s) from '{source_device['label']}' into '{library_root}'. "
+                f"Imported {actually_copied} new file(s) (skipped {processed_files - actually_copied}) from '{source_device['label']}' into '{library_root}'. "
                 f"Indexed {indexed} track record(s)."
             )
             queries.log_sync_run(db, "import_library_input", "completed", details)
             db.commit()
-            set_job_state("completed", details, 100, copied_files, total_files)
+            set_job_state("completed", details, 100, processed_files, total_files)
         except Exception as e:
             logger.error(f"Error during import: {e}", exc_info=True)
             set_job_state("error", f"Error during import: {e}")
@@ -322,24 +342,29 @@ def run_backup_library(app):
             set_job_state("completed", "No music files to backup.", 100, 0, 0)
             return
 
-        copied_files = 0
+        processed_files = 0
+        actually_copied = 0
         try:
             for source_file in source_files:
                 relative_path = source_file.relative_to(library_root)
                 target_file = backup_root / relative_path
                 target_file.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source_file, target_file)
-                copied_files += 1
-                pct = int((copied_files / total_files) * 100)
-                set_job_state("running", f"Backing up {source_file.name}...", pct, copied_files, total_files)
+                
+                if _file_needs_update(source_file, target_file):
+                    shutil.copy2(source_file, target_file)
+                    actually_copied += 1
+                    
+                processed_files += 1
+                pct = int((processed_files / total_files) * 100)
+                set_job_state("running", f"Backing up {source_file.name}...", pct, processed_files, total_files)
 
             details = (
-                f"Backed up {copied_files} file(s) from '{library_root}' to "
+                f"Backed up {actually_copied} new file(s) (skipped {processed_files - actually_copied}) from '{library_root}' to "
                 f"'{backup_device['label']}' at '{backup_root}'."
             )
             queries.log_sync_run(db, "backup_library", "completed", details)
             db.commit()
-            set_job_state("completed", details, 100, copied_files, total_files)
+            set_job_state("completed", details, 100, processed_files, total_files)
         except Exception as e:
             logger.error(f"Error during backup: {e}", exc_info=True)
             set_job_state("error", f"Error during backup: {e}")
@@ -387,7 +412,34 @@ def run_sync_mp3(app):
         queries.log_sync_run(db, "sync_mp3", "started", f"Starting sync of {selected_count} tracks.")
         db.commit()
 
-        copied_files = 0
+        # Build library status map (relative path -> selected)
+        all_tracks = queries.get_all_tracks(db)
+        library_status = {}
+        for track in all_tracks:
+            try:
+                rel = Path(track["path"]).relative_to(library_root)
+                library_status[str(rel)] = track["selected_for_sync"]
+            except ValueError:
+                continue
+
+        # Cleanup scan: Delete tracks present in library but NOT selected
+        deleted_count = 0
+        set_job_state("running", "Cleaning up unselected tracks...", 0)
+        for f in sync_root.rglob("*"):
+            if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS:
+                try:
+                    usb_rel_path = f.relative_to(sync_root)
+                    # If this file exists in library but is NOT selected, delete it
+                    if library_status.get(str(usb_rel_path)) == 0:
+                        logger.info(f"Deleting unselected track from player: {f}")
+                        f.unlink()
+                        deleted_count += 1
+                except (ValueError, OSError) as e:
+                    logger.warning(f"Error checking/deleting file {f}: {e}")
+                    continue
+
+        processed_files = 0
+        actually_copied = 0
         total_files = selected_count
         try:
             selected_tracks = queries.get_selected_sync_tracks(db)
@@ -405,21 +457,24 @@ def run_sync_mp3(app):
                 target_file = sync_root / relative_path
                 target_file.parent.mkdir(parents=True, exist_ok=True)
 
-                shutil.copy2(source_file, target_file)
-                copied_files += 1
+                if _file_needs_update(source_file, target_file):
+                    shutil.copy2(source_file, target_file)
+                    actually_copied += 1
+                
+                processed_files += 1
                 if total_files > 0:
-                    pct = int((copied_files / total_files) * 100)
+                    pct = int((processed_files / total_files) * 100)
                 else: 
                     pct = 0
-                set_job_state("running", f"Syncing {source_file.name}...", pct, copied_files, total_files)
+                set_job_state("running", f"Syncing {source_file.name}...", pct, processed_files, total_files)
 
             details = (
-                f"Synced {copied_files} of {selected_count} selected track(s) to "
-                f"'{mp3_device['label']}' at '{sync_root}'."
+                f"Synced {actually_copied} new file(s) (skipped {processed_files - actually_copied}) of {selected_count} selected track(s) to "
+                f"'{mp3_device['label']}'. Deleted {deleted_count} unselected track(s)."
             )
             queries.log_sync_run(db, "sync_mp3", "completed", details)
             db.commit()
-            set_job_state("completed", details, 100, copied_files, total_files)
+            set_job_state("completed", details, 100, processed_files, total_files)
         except Exception as e:
             logger.error(f"Error during MP3 sync: {e}", exc_info=True)
             queries.log_sync_run(db, "sync_mp3", "failed", f"Failed: {e}")
