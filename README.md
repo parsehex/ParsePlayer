@@ -2,7 +2,8 @@
 
 > Call this project "vibe-coded" if you wanna fight about it - I call it "solo-pair-programmed".
 >
-> Want to read my thoughts on the topic? (TODO link)
+> Read the [raw README](README.raw.md) for the human-written version + history.
+<!-- > Want to read my thoughts on this AI-programming topic? (TODO link) -->
 
 Early-stage software for a Raspberry Pi based personal music hub.
 
