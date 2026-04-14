@@ -45,6 +45,9 @@ onMounted(fetchData)
 
 // Watch for route query changes (browsing)
 watch(() => route.query, fetchData)
+
+// Watch for manual refresh triggers (e.g. job completion)
+watch(() => store.refreshTrigger, fetchData)
 </script>
 
 <template>

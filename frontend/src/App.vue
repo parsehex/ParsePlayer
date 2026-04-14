@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { store } from './store'
+import axios from 'axios'
+
+async function stopJob() {
+  try {
+    await axios.post('/api/actions/stop')
+  } catch (error) {
+    console.error('Failed to stop job:', error)
+  }
+}
 </script>
 
 <template>
@@ -49,7 +58,17 @@ import { store } from './store'
         <p id="busy-text">{{ store.jobProgress && store.jobProgress.status === 'running' ? store.jobProgress.message : store.busyMessage }}</p>
         <div v-if="store.jobProgress && store.jobProgress.status === 'running'" class="progress-container" style="margin-top: 1rem; width: 100%;">
           <progress :value="store.jobProgress.percentage" max="100" style="width: 100%;"></progress>
-          <span style="display: block; text-align: center; font-size: 0.8rem; margin-top: 0.2rem;" v-if="store.jobProgress.total > 0">{{ store.jobProgress.completed }} / {{ store.jobProgress.total }}</span>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-top: 0.4rem;">
+            <span v-if="store.jobProgress.total > 0">{{ store.jobProgress.completed }} / {{ store.jobProgress.total }}</span>
+            <button 
+              @click="stopJob" 
+              class="error outline stop-btn" 
+              style="margin: 0; padding: 0.1rem 0.6rem; font-size: 0.75rem;"
+              :disabled="store.jobProgress.status === 'stopping'"
+            >
+              {{ store.jobProgress.status === 'stopping' ? 'Stopping...' : 'Stop' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>

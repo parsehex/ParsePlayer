@@ -51,6 +51,7 @@ interface StoreState {
   isLoading: boolean;
   filterQuery: string;
   jobProgress: JobProgress | null;
+  refreshTrigger: number;
 }
 
 export const store = reactive<StoreState>({
@@ -69,7 +70,12 @@ export const store = reactive<StoreState>({
   isLoading: false,
   filterQuery: '',
   jobProgress: null,
+  refreshTrigger: 0,
 })
+
+export function refreshLibrary() {
+  store.refreshTrigger++
+}
 
 export function addFlash(message: string, type: FlashMessage['type'] = 'success') {
   const id = Date.now()

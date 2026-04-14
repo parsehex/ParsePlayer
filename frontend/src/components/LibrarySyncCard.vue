@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { store, addFlash } from '../store'
+import { store, addFlash, refreshLibrary } from '../store'
 import axios from 'axios'
 
 let pollInterval: number | null = null;
@@ -17,6 +17,7 @@ async function pollProgress() {
       store.busyMessage = '';
       if (data.status === 'completed') {
         addFlash(data.message, 'success');
+        refreshLibrary();
       } else {
         addFlash(data.message, 'error');
       }

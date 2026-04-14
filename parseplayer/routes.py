@@ -256,6 +256,14 @@ def get_job_status():
     return jsonify(services.job_state)
 
 
+@bp.post("/api/actions/stop")
+def stop_job():
+    if services.job_state["status"] == "running":
+        services.set_job_state("stopping", "Stopping job...")
+        return jsonify({"success": True, "message": "Stopping job..."})
+    return jsonify({"success": False, "message": "No job is currently running."})
+
+
 @bp.post("/api/actions/import-library-input")
 def import_library_input():
     if services.job_state["status"] == "running":
