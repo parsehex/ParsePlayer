@@ -1,9 +1,12 @@
+import logging
 from pathlib import Path
 
 from flask import Flask
 
 from .db import close_db, init_app as init_db_app
 from .routes import bp as main_bp
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
 def create_app() -> Flask:
