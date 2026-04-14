@@ -105,12 +105,19 @@
   </article>
 </section>
 
-<section>
+<section
+  id="library-section"
+  hx-boost="true"
+  hx-target="this"
+  hx-swap="outerHTML"
+  hx-select="#library-section"
+>
   <article class="library-panel">
+    <span id="selected-count" hx-swap-oob="true" hidden>{{ selected_count }}</span>
     <div class="section-header library-header">
       <h2>Track Library</h2>
       <div class="library-meta">
-        <span>{{ tracks|length }} tracks</span>
+        <span>Showing {{ tracks|length }} / {{ all_track_count }}</span>
         <span><span id="library-selected-count">{{ selected_count }}</span> selected</span>
       </div>
     </div>
@@ -123,6 +130,104 @@
         placeholder="Filter by title, artist, or path"
         autocomplete="off"
       />
+      <form method="get" action="{{ url_for('main.index') }}" class="browse-reset-form" hx-push-url="true">
+        <button type="submit" class="outline">All Tracks</button>
+      </form>
+      <div class="library-bulk-all">
+        <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+          <input type="hidden" name="scope" value="all" />
+          <input type="hidden" name="action" value="select" />
+          <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+          <input type="hidden" name="return_album" value="{{ active_album }}" />
+          <button type="submit" class="outline">Select All</button>
+        </form>
+        <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+          <input type="hidden" name="scope" value="all" />
+          <input type="hidden" name="action" value="clear" />
+          <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+          <input type="hidden" name="return_album" value="{{ active_album }}" />
+          <button type="submit" class="secondary outline">Clear All</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="browse-grid">
+      <section class="browse-card">
+        <h3>Artists (Folder Level)</h3>
+        <div class="browse-list">
+          {% for group in artist_groups %}
+            <article class="browse-item {% if group.is_active %}browse-item-active{% endif %}">
+              <div class="browse-label">
+                <strong>{{ group.label }}</strong>
+                <small>{{ group.selected }}/{{ group.total }} selected</small>
+              </div>
+              <div class="browse-actions">
+                <form method="get" action="{{ url_for('main.index') }}" hx-push-url="true">
+                  <input type="hidden" name="artist" value="{{ group.key }}" />
+                  <button type="submit" class="outline">Browse</button>
+                </form>
+                <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+                  <input type="hidden" name="scope" value="folder" />
+                  <input type="hidden" name="value" value="{{ group.folder_path }}" />
+                  <input type="hidden" name="action" value="select" />
+                  <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+                  <input type="hidden" name="return_album" value="{{ active_album }}" />
+                  <button type="submit" class="outline">Select</button>
+                </form>
+                <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+                  <input type="hidden" name="scope" value="folder" />
+                  <input type="hidden" name="value" value="{{ group.folder_path }}" />
+                  <input type="hidden" name="action" value="clear" />
+                  <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+                  <input type="hidden" name="return_album" value="{{ active_album }}" />
+                  <button type="submit" class="secondary outline">Clear</button>
+                </form>
+              </div>
+            </article>
+          {% else %}
+            <p class="browse-empty">No artist folders indexed yet.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="browse-card">
+        <h3>Albums (Within Artist)</h3>
+        <div class="browse-list">
+          {% for group in album_groups %}
+            <article class="browse-item {% if group.is_active %}browse-item-active{% endif %}">
+              <div class="browse-label">
+                <strong>{{ group.label }}</strong>
+                <small>{{ group.selected }}/{{ group.total }} selected</small>
+              </div>
+              <div class="browse-actions">
+                <form method="get" action="{{ url_for('main.index') }}" hx-push-url="true">
+                  <input type="hidden" name="artist" value="{{ active_artist }}" />
+                  <input type="hidden" name="album" value="{{ group.key }}" />
+                  <button type="submit" class="outline">Browse</button>
+                </form>
+                <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+                  <input type="hidden" name="scope" value="folder" />
+                  <input type="hidden" name="value" value="{{ group.folder_path }}" />
+                  <input type="hidden" name="action" value="select" />
+                  <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+                  <input type="hidden" name="return_album" value="{{ active_album }}" />
+                  <button type="submit" class="outline">Select</button>
+                </form>
+                <form method="post" action="{{ url_for('main.bulk_track_selection') }}">
+                  <input type="hidden" name="scope" value="folder" />
+                  <input type="hidden" name="value" value="{{ group.folder_path }}" />
+                  <input type="hidden" name="action" value="clear" />
+                  <input type="hidden" name="return_artist" value="{{ active_artist }}" />
+                  <input type="hidden" name="return_album" value="{{ active_album }}" />
+                  <button type="submit" class="secondary outline">Clear</button>
+                </form>
+              </div>
+            </article>
+          {% else %}
+            <p class="browse-empty">Select an artist folder to browse albums.</p>
+          {% endfor %}
+        </div>
+      </section>
     </div>
 
     <div class="table-wrap library-table-wrap">
@@ -153,14 +258,14 @@
 
 <script>
   (function () {
-    const filterInput = document.getElementById("library-filter");
-    const filterEmptyRow = document.getElementById("track-library-filter-empty");
-    const libraryBody = document.getElementById("track-library-body");
-    if (!filterInput || !filterEmptyRow || !libraryBody) {
-      return;
-    }
-
     const applyFilter = function () {
+      const filterInput = document.getElementById("library-filter");
+      const filterEmptyRow = document.getElementById("track-library-filter-empty");
+      const libraryBody = document.getElementById("track-library-body");
+      if (!filterInput || !filterEmptyRow || !libraryBody) {
+        return;
+      }
+
       const query = filterInput.value.trim().toLowerCase();
       const rows = libraryBody.querySelectorAll("tr[data-track-search]");
       let visibleRows = 0;
@@ -177,8 +282,20 @@
       filterEmptyRow.hidden = visibleRows !== 0 || !query;
     };
 
-    filterInput.addEventListener("input", applyFilter);
+    const wireLibraryFilter = function () {
+      const filterInput = document.getElementById("library-filter");
+      if (!filterInput || filterInput.dataset.wired === "1") {
+        return;
+      }
+      filterInput.dataset.wired = "1";
+      filterInput.addEventListener("input", applyFilter);
+    };
+
+    wireLibraryFilter();
+    applyFilter();
+
     document.body.addEventListener("htmx:afterSwap", function () {
+      wireLibraryFilter();
       applyFilter();
     });
 

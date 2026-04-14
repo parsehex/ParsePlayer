@@ -1,5 +1,7 @@
 from pathlib import Path
 import shutil
+from collections import defaultdict
+from urllib.parse import parse_qs, urlparse
 
 from flask import Blueprint, current_app, flash, make_response, redirect, render_template, request, url_for
 import json
@@ -14,13 +16,53 @@ USB_ROLES = ["unknown", "library_input", "backup", "mp3_player"]
 
 def _fetch_tracks():
     db = get_db()
-    return db.execute(
+    rows = db.execute(
         """
         SELECT id, path, title, artist, selected_for_sync, updated_at
         FROM tracks
         ORDER BY selected_for_sync DESC, artist IS NULL, artist, title
         """
     ).fetchall()
+    return [_enrich_track_for_display(row) for row in rows]
+
+
+def _derive_virtual_artist_album(track_path: str, music_root: str) -> tuple[str, str]:
+    root = Path(music_root).resolve()
+    path = Path(track_path).resolve()
+
+    try:
+        rel = path.relative_to(root)
+        parts = rel.parts
+        if len(parts) >= 3:
+            return parts[0], parts[1]
+        if len(parts) == 2:
+            return parts[0], "[No Album]"
+        return "[Music Root]", "[No Album]"
+    except ValueError:
+        parent = path.parent
+        artist = parent.parent.name if parent.parent != parent else "[Unknown Artist]"
+        album = parent.name or "[No Album]"
+        return artist, album
+
+
+def _enrich_track_for_display(track_row):
+    track = dict(track_row)
+    artist, album = _derive_virtual_artist_album(track["path"], current_app.config["MUSIC_ROOT"])
+    track["virtual_artist"] = artist
+    track["virtual_album"] = album
+    return track
+
+
+def _active_browse_from_request() -> tuple[str, str]:
+    """Read current browse scope from htmx current URL when available."""
+    current_url = request.headers.get("HX-Current-URL", "")
+    if not current_url:
+        return "", ""
+
+    query = parse_qs(urlparse(current_url).query)
+    artist = (query.get("artist", [""])[0] or "").strip()
+    album = (query.get("album", [""])[0] or "").strip()
+    return artist, album
 
 
 def _fetch_usb_devices():
@@ -60,12 +102,138 @@ def _upsert_tracks(db, tracks: list[dict[str, str | None]]) -> int:
     return inserted
 
 
+def _build_track_browse_groups(
+    tracks,
+    music_root: str,
+    active_artist: str,
+    active_album: str,
+) -> tuple[list[dict], list[dict], list]:
+    music_root_path = Path(music_root).resolve()
+    artist_totals: dict[str, dict[str, int | str]] = defaultdict(
+        lambda: {"label": "", "folder_path": "", "total": 0, "selected": 0}
+    )
+    album_totals: dict[str, dict[str, int | str]] = defaultdict(
+        lambda: {"label": "", "folder_path": "", "total": 0, "selected": 0}
+    )
+
+    normalized_rows: list[dict] = []
+
+    for track in tracks:
+        track_path = Path(track["path"])
+        parent_path = track_path.parent.resolve()
+        selected = 1 if track["selected_for_sync"] else 0
+
+        try:
+            relative_file = track_path.resolve().relative_to(music_root_path)
+            parts = relative_file.parts
+        except ValueError:
+            parts = ()
+
+        artist_key = parts[0] if len(parts) >= 2 else "__root__"
+        artist_label = artist_key if artist_key != "__root__" else "[Music Root]"
+        artist_folder_path = str(music_root_path / artist_key) if artist_key != "__root__" else str(music_root_path)
+
+        artist_totals[artist_key]["label"] = artist_label
+        artist_totals[artist_key]["folder_path"] = artist_folder_path
+        artist_totals[artist_key]["total"] = int(artist_totals[artist_key]["total"]) + 1
+        artist_totals[artist_key]["selected"] = int(artist_totals[artist_key]["selected"]) + selected
+
+        album_key = parts[1] if len(parts) >= 3 else ""
+        album_label = album_key
+        album_folder_path = str(Path(artist_folder_path) / album_key) if album_key else ""
+
+        normalized_rows.append(
+            {
+                "track": track,
+                "artist_key": artist_key,
+                "album_key": album_key,
+                "parent_path": parent_path,
+            }
+        )
+
+        if active_artist and artist_key == active_artist and album_key:
+            album_totals[album_key]["label"] = album_label
+            album_totals[album_key]["folder_path"] = album_folder_path
+            album_totals[album_key]["total"] = int(album_totals[album_key]["total"]) + 1
+            album_totals[album_key]["selected"] = int(album_totals[album_key]["selected"]) + selected
+
+    artist_groups = [
+        {
+            "key": key,
+            "label": data["label"],
+            "folder_path": data["folder_path"],
+            "total": int(data["total"]),
+            "selected": int(data["selected"]),
+            "is_active": key == active_artist,
+        }
+        for key, data in artist_totals.items()
+    ]
+    album_groups = [
+        {
+            "key": key,
+            "label": data["label"],
+            "folder_path": data["folder_path"],
+            "total": int(data["total"]),
+            "selected": int(data["selected"]),
+            "is_active": key == active_album,
+        }
+        for key, data in album_totals.items()
+    ]
+
+    artist_groups.sort(key=lambda item: str(item["label"]).lower())
+    album_groups.sort(key=lambda item: str(item["label"]).lower())
+
+    filtered_tracks: list = []
+    for row in normalized_rows:
+        if active_artist and row["artist_key"] != active_artist:
+            continue
+        if active_album and row["album_key"] != active_album:
+            continue
+        filtered_tracks.append(row["track"])
+
+    filtered_tracks.sort(
+        key=lambda track: (
+            -int(track["selected_for_sync"]),
+            (track["artist"] or "").lower(),
+            str(track["title"]).lower(),
+        )
+    )
+
+    # If the selected artist no longer exists, reset the scoped browse.
+    if active_artist and all(group["key"] != active_artist for group in artist_groups):
+        active_artist = ""
+        active_album = ""
+        filtered_tracks = list(tracks)
+
+    if active_album and active_artist and all(group["key"] != active_album for group in album_groups):
+        active_album = ""
+
+    return artist_groups, album_groups, filtered_tracks
+
+
 @bp.get("/")
 def index():
     music_root = current_app.config["MUSIC_ROOT"]
+    all_tracks = _fetch_tracks()
+    active_artist = request.args.get("artist", "").strip()
+    active_album = request.args.get("album", "").strip()
+    if active_artist == "__root__":
+        active_album = ""
+
+    artist_groups, album_groups, tracks = _build_track_browse_groups(
+        all_tracks,
+        music_root,
+        active_artist,
+        active_album,
+    )
     return render_template(
         "index.html",
-        tracks=_fetch_tracks(),
+        tracks=tracks,
+        all_track_count=len(all_tracks),
+        artist_groups=artist_groups,
+        album_groups=album_groups,
+        active_artist=active_artist,
+        active_album=active_album,
         usb_devices=_fetch_usb_devices(),
         selected_count=_fetch_sync_count(),
         music_root=music_root,
@@ -101,16 +269,95 @@ def toggle_track(track_id: int):
     )
     db.commit()
 
-    track = db.execute(
+    track_row = db.execute(
         "SELECT id, title, artist, path, selected_for_sync FROM tracks WHERE id = ?",
         (track_id,),
     ).fetchone()
+    track = _enrich_track_for_display(track_row)
     selected_count = _fetch_sync_count()
-    response = make_response(render_template("partials/track_row.html", track=track))
+    active_artist, active_album = _active_browse_from_request()
+    response = make_response(
+        render_template(
+            "partials/track_row.html",
+            track=track,
+            active_artist=active_artist,
+            active_album=active_album,
+        )
+    )
     response.headers["HX-Trigger"] = json.dumps(
         {"trackSelectionChanged": {"selectedCount": selected_count}}
     )
     return response
+
+
+@bp.post("/tracks/bulk")
+def bulk_track_selection():
+    scope = request.form.get("scope", "").strip()
+    action = request.form.get("action", "").strip()
+    value = request.form.get("value", "").strip()
+    return_artist = request.form.get("return_artist", "").strip()
+    return_album = request.form.get("return_album", "").strip()
+
+    if action not in {"select", "clear"}:
+        flash("Invalid bulk selection action.", "error")
+        return redirect(url_for("main.index", artist=return_artist, album=return_album))
+
+    target = 1 if action == "select" else 0
+    db = get_db()
+
+    if scope == "all":
+        db.execute(
+            "UPDATE tracks SET selected_for_sync = ?, updated_at = CURRENT_TIMESTAMP",
+            (target,),
+        )
+        label = "all tracks"
+    elif scope == "artist":
+        if not value:
+            flash("Missing artist for bulk selection.", "error")
+            return redirect(url_for("main.index", artist=return_artist, album=return_album))
+        if value == "__unknown__":
+            db.execute(
+                """
+                UPDATE tracks
+                SET selected_for_sync = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE artist IS NULL OR artist = ''
+                """,
+                (target,),
+            )
+            label = "Unknown Artist"
+        else:
+            db.execute(
+                """
+                UPDATE tracks
+                SET selected_for_sync = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE artist = ?
+                """,
+                (target, value),
+            )
+            label = f"artist '{value}'"
+    elif scope == "folder":
+        if not value:
+            flash("Missing folder for bulk selection.", "error")
+            return redirect(url_for("main.index", artist=return_artist, album=return_album))
+        db.execute(
+            """
+            UPDATE tracks
+            SET selected_for_sync = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE path = ? OR path LIKE ?
+            """,
+            (target, value, f"{value}/%"),
+        )
+        label = f"folder '{Path(value).name or value}'"
+    else:
+        flash("Invalid bulk selection scope.", "error")
+        return redirect(url_for("main.index", artist=return_artist, album=return_album))
+
+    db.commit()
+    verb = "Selected" if target == 1 else "Cleared"
+    flash(f"{verb} tracks for {label}.", "success")
+    if not return_artist:
+        return_album = ""
+    return redirect(url_for("main.index", artist=return_artist, album=return_album))
 
 
 @bp.post("/usb/register")

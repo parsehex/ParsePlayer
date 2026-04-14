@@ -1,21 +1,37 @@
 <tr
   id="track-{{ track.id }}"
   class="{% if track.selected_for_sync %}selected{% endif %}"
-  data-track-search="{{ ((track.title or '') ~ ' ' ~ (track.artist or '') ~ ' ' ~ track.path)|lower }}"
+  data-track-search="{{ ((track.title or '') ~ ' ' ~ (track.virtual_artist or '') ~ ' ' ~ (track.virtual_album or '') ~ ' ' ~ track.path)|lower }}"
 >
   <td class="track-action-cell">
     <button
       hx-post="{{ url_for('main.toggle_track', track_id=track.id) }}"
       hx-target="#track-{{ track.id }}"
       hx-swap="outerHTML"
-      class="outline"
+      hx-select="tr"
+      class="outline track-select-btn"
+      aria-label="{% if track.selected_for_sync %}Selected. Click to clear selection.{% else %}Not selected. Click to select.{% endif %}"
+      title="{% if track.selected_for_sync %}Clear selection{% else %}Select track{% endif %}"
     >
-      {% if track.selected_for_sync %}Selected{% else %}Select{% endif %}
+      {% if track.selected_for_sync %}
+        <span aria-hidden="true">&#10003;</span>
+      {% else %}
+        <span aria-hidden="true">&#9711;</span>
+      {% endif %}
+      <span class="visually-hidden">
+        {% if track.selected_for_sync %}Selected{% else %}Select{% endif %}
+      </span>
     </button>
   </td>
   <td class="track-main-cell">
+    {% if active_album %}
+      {# Album scope is already narrow enough; show title only. #}
+    {% elif active_artist %}
+      <small class="track-context">{{ track.virtual_album }}</small>
+    {% else %}
+      <small class="track-context">{{ track.virtual_artist }} / {{ track.virtual_album }}</small>
+    {% endif %}
     <strong class="track-title">{{ track.title }}</strong>
-    <small class="track-artist">{{ track.artist or 'Unknown artist' }}</small>
   </td>
   <td class="path track-path-cell">{{ track.path }}</td>
 </tr>
