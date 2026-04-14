@@ -51,6 +51,8 @@ The database is created automatically at `data/parseplayer.db`.
 
 - Use the **Detect Mounted USB Devices** button in the UI.
 - Assign roles directly in the detected device rows.
+- For importing music from a USB drive into the library, assign the drive role to `library_input` and use **Import From Library USB**.
+- Import copies supported audio files into the app's music root and indexes them automatically.
 - Detection expects Linux `lsblk` (typically from `util-linux`) to be available.
 - Detected devices are upserted by UUID; previously assigned roles are preserved.
 

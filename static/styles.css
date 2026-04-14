@@ -183,10 +183,44 @@ td.path {
 }
 
 /* ── Inline role form ── */
-.inline-role-form {
+.inline-role-form,
+.inline-action-form {
   margin: 0;
 }
 
 .inline-role-form select {
   margin-bottom: 0;
+}
+
+.inline-action-form button {
+  padding: 0.1rem 0.55rem;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ── Section header with inline action button ── */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--lcd-border);
+  padding-bottom: 0.2rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-header h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.section-header form {
+  margin: 0;
+}
+
+.section-header button {
+  padding: 0.1rem 0.65rem;
+  font-size: 0.9rem;
+  margin: 0;
 }

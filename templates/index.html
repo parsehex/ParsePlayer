@@ -4,6 +4,9 @@
 <section class="grid">
   <article>
     <h2>Library</h2>
+    <form method="post" action="{{ url_for('main.import_library_input') }}">
+      <button type="submit" class="secondary">Import From Library USB</button>
+    </form>
     <form method="post" action="{{ url_for('main.scan_library') }}">
       <label for="source_path">Source folder</label>
       <input id="source_path" name="source_path" value="{{ music_root }}" />
@@ -25,10 +28,12 @@
 
 <section>
   <article>
-    <h2>Known USB Devices</h2>
-    <form method="post" action="{{ url_for('main.detect_usb') }}">
-      <button type="submit" class="secondary">Detect Mounted USB Devices</button>
-    </form>
+    <div class="section-header">
+      <h2>USB Devices</h2>
+      <form method="post" action="{{ url_for('main.detect_usb') }}">
+        <button type="submit" class="secondary outline">Detect</button>
+      </form>
+    </div>
 
     <div class="table-wrap">
       <table>
@@ -39,6 +44,7 @@
             <th>Role</th>
             <th>Mount</th>
             <th>Last Seen</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -61,10 +67,21 @@
               </td>
               <td>{{ usb.mount_path or '-' }}</td>
               <td>{{ usb.last_seen_at }}</td>
+              <td>
+                {% if usb.mount_path %}
+                  <form method="post" action="{{ url_for('main.unmount_usb', usb_id=usb.id) }}" class="inline-action-form">
+                    <button type="submit" class="secondary outline">Unmount</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{{ url_for('main.mount_usb', usb_id=usb.id) }}" class="inline-action-form">
+                    <button type="submit" class="outline">Mount</button>
+                  </form>
+                {% endif %}
+              </td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="5">No USB devices registered yet.</td>
+              <td colspan="6">No USB devices registered yet.</td>
             </tr>
           {% endfor %}
         </tbody>
