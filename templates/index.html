@@ -106,29 +106,97 @@
 </section>
 
 <section>
-  <article>
-    <h2>Track Library</h2>
-    <div class="table-wrap">
-      <table>
+  <article class="library-panel">
+    <div class="section-header library-header">
+      <h2>Track Library</h2>
+      <div class="library-meta">
+        <span>{{ tracks|length }} tracks</span>
+        <span><span id="library-selected-count">{{ selected_count }}</span> selected</span>
+      </div>
+    </div>
+
+    <div class="library-toolbar">
+      <label class="library-filter-field" for="library-filter">Search</label>
+      <input
+        id="library-filter"
+        type="search"
+        placeholder="Filter by title, artist, or path"
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="table-wrap library-table-wrap">
+      <table class="library-table">
         <thead>
           <tr>
             <th>Sync</th>
-            <th>Title</th>
-            <th>Artist</th>
-            <th>Path</th>
+            <th>Track</th>
+            <th>File</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="track-library-body">
           {% for track in tracks %}
             {% include "partials/track_row.html" %}
           {% else %}
-            <tr>
-              <td colspan="4">No tracks indexed yet. Run a scan first.</td>
+            <tr id="track-library-empty">
+              <td colspan="3">No tracks indexed yet. Run a scan first.</td>
             </tr>
           {% endfor %}
+          <tr id="track-library-filter-empty" hidden>
+            <td colspan="3">No tracks match this filter.</td>
+          </tr>
         </tbody>
       </table>
     </div>
   </article>
 </section>
+
+<script>
+  (function () {
+    const filterInput = document.getElementById("library-filter");
+    const filterEmptyRow = document.getElementById("track-library-filter-empty");
+    const libraryBody = document.getElementById("track-library-body");
+    if (!filterInput || !filterEmptyRow || !libraryBody) {
+      return;
+    }
+
+    const applyFilter = function () {
+      const query = filterInput.value.trim().toLowerCase();
+      const rows = libraryBody.querySelectorAll("tr[data-track-search]");
+      let visibleRows = 0;
+
+      rows.forEach(function (row) {
+        const haystack = row.getAttribute("data-track-search") || "";
+        const matches = !query || haystack.includes(query);
+        row.hidden = !matches;
+        if (matches) {
+          visibleRows += 1;
+        }
+      });
+
+      filterEmptyRow.hidden = visibleRows !== 0 || !query;
+    };
+
+    filterInput.addEventListener("input", applyFilter);
+    document.body.addEventListener("htmx:afterSwap", function () {
+      applyFilter();
+    });
+
+    document.body.addEventListener("trackSelectionChanged", function (event) {
+      const selectedCount = event.detail && event.detail.selectedCount;
+      if (selectedCount === undefined) {
+        return;
+      }
+
+      const syncCount = document.getElementById("selected-count");
+      const libraryCount = document.getElementById("library-selected-count");
+      if (syncCount) {
+        syncCount.textContent = selectedCount;
+      }
+      if (libraryCount) {
+        libraryCount.textContent = selectedCount;
+      }
+    });
+  })();
+</script>
 {% endblock %}

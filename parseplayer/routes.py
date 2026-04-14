@@ -1,7 +1,8 @@
 from pathlib import Path
 import shutil
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, make_response, redirect, render_template, request, url_for
+import json
 
 from .db import get_db
 from .music import SUPPORTED_EXTENSIONS, discover_tracks
@@ -105,7 +106,11 @@ def toggle_track(track_id: int):
         (track_id,),
     ).fetchone()
     selected_count = _fetch_sync_count()
-    return render_template("partials/track_row.html", track=track, selected_count=selected_count)
+    response = make_response(render_template("partials/track_row.html", track=track))
+    response.headers["HX-Trigger"] = json.dumps(
+        {"trackSelectionChanged": {"selectedCount": selected_count}}
+    )
+    return response
 
 
 @bp.post("/usb/register")

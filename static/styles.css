@@ -318,6 +318,84 @@ td.path {
   word-break: break-all;
 }
 
+.library-panel {
+  padding-top: 0.95rem;
+}
+
+.library-header {
+  align-items: center;
+}
+
+.library-meta {
+  display: flex;
+  gap: 0.8rem;
+  color: var(--lcd-dim);
+  white-space: nowrap;
+}
+
+.library-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.library-filter-field {
+  margin: 0;
+  color: var(--lcd-dim);
+  white-space: nowrap;
+}
+
+.library-toolbar input {
+  margin: 0;
+}
+
+.library-table-wrap {
+  max-height: 34rem;
+}
+
+.library-table {
+  margin-bottom: 0;
+}
+
+.library-table th,
+.library-table td {
+  vertical-align: middle;
+}
+
+.track-action-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.track-action-cell button {
+  margin: 0;
+  min-width: 7.2rem;
+}
+
+.track-main-cell {
+  min-width: 16rem;
+}
+
+.track-title,
+.track-artist {
+  display: block;
+}
+
+.track-title {
+  line-height: 1.05;
+}
+
+.track-artist {
+  color: var(--lcd-dim);
+  font-size: 0.82em;
+}
+
+.track-path-cell {
+  max-width: 34rem;
+}
+
 /* ── Busy overlay for long-running actions ── */
 .busy-overlay {
   position: fixed;
@@ -370,5 +448,10 @@ body.is-busy {
 
   .lcd-title-bar {
     align-items: center;
+  }
+
+  .library-toolbar {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
   }
 }
