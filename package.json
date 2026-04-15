@@ -9,9 +9,13 @@
     "backend": "sh ./start.sh",
     "frontend": "npm run dev -w frontend -- --host",
     "frontend:build": "npm run build -w frontend",
-    "dev": "concurrently --kill-others \"npm run backend\" \"npm run frontend\""
+    "dev": "concurrently --kill-others \"npm run backend\" \"npm run frontend\"",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "vitepress": "^1.6.3"
   }
 }

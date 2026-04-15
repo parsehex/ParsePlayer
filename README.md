@@ -13,6 +13,26 @@ Current stack:
 - Vue
 - Pico.css
 
+## Documentation site
+
+A VitePress docs site now lives in `docs/`.
+
+Preview docs locally:
+
+```bash
+npm run docs:dev
+```
+
+Build static docs:
+
+```bash
+npm run docs:build
+```
+
+Primary runbook for rebuilding a fresh Pi SD card:
+
+- `docs/guides/pi-fresh-setup.md`
+
 ## What this first version does
 
 - Scans a source folder and indexes audio files into a local SQLite database.
