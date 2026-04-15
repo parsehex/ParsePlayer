@@ -168,59 +168,7 @@ If you see empty/black space to the right, remove hard `--window-size` and `--wi
 
 This repo includes a splash asset at `resources/PEARL/parseplayer-splash.svg` that matches the app header logo + name.
 
-To apply it as a boot splash using Plymouth on Ubuntu Server:
-
-1. Install plymouth and imagemagick:
-
-```bash
-sudo apt install -y plymouth plymouth-themes imagemagick
-```
-
-2. Convert the SVG to PNG:
-
-```bash
-convert resources/PEARL/parseplayer-splash.svg -resize 640x384 /tmp/parseplayer-splash.png
-```
-
-3. Create a minimal theme:
-
-```bash
-sudo mkdir -p /usr/share/plymouth/themes/parseplayer
-sudo cp /tmp/parseplayer-splash.png /usr/share/plymouth/themes/parseplayer/splash.png
-```
-
-Create `/usr/share/plymouth/themes/parseplayer/parseplayer.plymouth`:
-
-```ini
-[Plymouth Theme]
-Name=ParsePlayer
-Description=ParsePlayer boot splash
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/parseplayer
-ScriptFile=/usr/share/plymouth/themes/parseplayer/parseplayer.script
-```
-
-Create `/usr/share/plymouth/themes/parseplayer/parseplayer.script`:
-
-```text
-screen_w = Window.GetWidth();
-screen_h = Window.GetHeight();
-img = Image("splash.png");
-sprite = Sprite(img);
-sprite.SetX((screen_w - img.GetWidth()) / 2);
-sprite.SetY((screen_h - img.GetHeight()) / 2);
-```
-
-4. Set theme and rebuild initramfs:
-
-```bash
-sudo update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth 100
-sudo update-alternatives --set default.plymouth /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth
-sudo update-initramfs -u
-sudo reboot
-```
+For the full Plymouth boot splash setup on Raspberry Pi, see [the fresh setup guide](docs/guides/pi-fresh-setup.md#11-boot-splash-plymouth).
 
 ### Safety switch
 

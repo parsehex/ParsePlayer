@@ -213,33 +213,37 @@ After reboot, confirm:
 - Chromium kiosk opens on the LCD
 - UI is reachable and usable
 
-## 11) Boot splash (Plymouth, current status + next try)
+## 11) Boot splash (Plymouth)
 
-This setup is partially working on the SPI LCD:
-- Plymouth starts and shows the ParsePlayer splash.
-- Orientation appears correct.
-- Current open issue: splash image sizing/placement is clipped on panel edges.
+This setup renders the ParsePlayer splash at boot on the SPI LCD framebuffer (fb1, 480x320).
 
-Use this as the known-good baseline for now.
-
-Install dependencies:
+### Install dependencies
 
 ```bash
 sudo apt update
 sudo apt install -y plymouth plymouth-themes imagemagick librsvg2-bin initramfs-tools
 ```
 
-Create theme assets:
+### Create theme directory
+
+```bash
+sudo rm -rf /usr/share/plymouth/themes/parseplayer
+sudo mkdir -p /usr/share/plymouth/themes/parseplayer
+```
+
+### Build splash image
+
+Render the SVG to match your framebuffer size (480x320 for the SPI panel):
 
 ```bash
 cd ~/ParsePlayer
-rsvg-convert -w 640 -h 384 resources/PEARL/parseplayer-splash.svg -o /tmp/parseplayer-splash.png
 
-sudo mkdir -p /usr/share/plymouth/themes/parseplayer
+rsvg-convert -w 480 -h 320 resources/PEARL/parseplayer-splash.svg -o /tmp/parseplayer-splash.png
+
 sudo cp /tmp/parseplayer-splash.png /usr/share/plymouth/themes/parseplayer/splash.png
 ```
 
-Create theme files:
+### Create theme definition file
 
 ```bash
 sudo tee /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth >/dev/null <<'EOF'
@@ -254,6 +258,8 @@ ScriptFile=/usr/share/plymouth/themes/parseplayer/parseplayer.script
 EOF
 ```
 
+### Create theme script (centered placement)
+
 ```bash
 sudo tee /usr/share/plymouth/themes/parseplayer/parseplayer.script >/dev/null <<'EOF'
 screen_w = Window.GetWidth();
@@ -265,14 +271,20 @@ sprite.SetY((screen_h - img.GetHeight()) / 2);
 EOF
 ```
 
-Enable theme (use absolute link path):
+### Set theme as default
 
 ```bash
 sudo update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth 100
 sudo update-alternatives --set default.plymouth /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth
 ```
 
-Force Plymouth to SPI framebuffer:
+Verify selection:
+
+```bash
+sudo update-alternatives --display default.plymouth
+```
+
+### Configure Plymouth daemon for fb1
 
 ```bash
 sudo tee /etc/plymouth/plymouthd.conf >/dev/null <<'EOF'
@@ -284,50 +296,28 @@ Framebuffer=/dev/fb1
 EOF
 ```
 
-Ensure `/boot/firmware/cmdline.txt` includes `quiet splash` (single-line file), then rebuild initramfs and reboot:
+### Update boot command line
+
+Edit `/boot/firmware/cmdline.txt` (keep on a single line):
+
+```bash
+sudo nano /boot/firmware/cmdline.txt
+```
+
+Ensure it includes:
+
+```
+splash plymouth.ignore-serial-consoles
+```
+
+### Rebuild and reboot
 
 ```bash
 sudo update-initramfs -u
 sudo reboot
 ```
 
-Current note:
-- Do not pin sprite to `0,0` yet; on this hardware it pushed the splash further off-screen.
-- Keep centered placement until panel-specific sizing is finalized.
-
-### Next try (recommended): geometry-safe splash image
-
-This approach avoids clipping by using a smaller logo centered on a panel-sized canvas before Plymouth renders it.
-
-```bash
-cd ~/ParsePlayer
-
-# Render a conservative logo size first.
-rsvg-convert -w 200 -h 120 resources/PEARL/parseplayer-splash.svg -o /tmp/parseplayer-logo.png
-
-# Build a panel-sized canvas and center the logo on it.
-convert -size 320x480 xc:'#9edd00' /tmp/parseplayer-logo.png -gravity center -composite /tmp/parseplayer-splash-safe.png
-
-sudo cp /tmp/parseplayer-splash-safe.png /usr/share/plymouth/themes/parseplayer/splash.png
-```
-
-Use the existing centered Plymouth script:
-
-```bash
-sudo tee /usr/share/plymouth/themes/parseplayer/parseplayer.script >/dev/null <<'EOF'
-screen_w = Window.GetWidth();
-screen_h = Window.GetHeight();
-img = Image("splash.png");
-sprite = Sprite(img);
-sprite.SetX((screen_w - img.GetWidth()) / 2);
-sprite.SetY((screen_h - img.GetHeight()) / 2);
-EOF
-```
-
-Then rebuild and reboot:
-
-```bash
-sudo update-initramfs -u
+Plymouth should now display the ParsePlayer splash on the SPI LCD at boot
 sudo reboot
 ```
 
