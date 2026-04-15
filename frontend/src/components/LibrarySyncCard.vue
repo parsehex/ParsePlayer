@@ -57,9 +57,6 @@ async function handleAction(endpoint: string, message: string) {
 
 <template>
   <article class="dashboard-card compact-card library-sync-card">
-    <div class="section-header">
-      <h2>Actions</h2>
-    </div>
     <div class="action-stack compact-actions">
       <button @click="handleAction('import-library-input', 'Importing music from USB. This can take a while for large libraries...')" class="secondary">
         Import
