@@ -71,16 +71,7 @@ git clone https://github.com/parsehex/ParsePlayer ParsePlayer
 cd ~/ParsePlayer
 ```
 
-## 4) Create Python virtual environment
-
-```bash
-cd ~/ParsePlayer
-python3 -m venv venv
-source venv/bin/activate
-pip install -U pip
-```
-
-## 5) Install ParsePlayer service
+## 4) Install ParsePlayer service
 
 Run the installer script:
 
@@ -96,14 +87,14 @@ This script:
 - installs and enables parseplayer.service
 - starts the service
 
-## 6) Verify backend service
+## 5) Verify backend service
 
 ```bash
 sudo systemctl status parseplayer --no-pager
 curl -I http://127.0.0.1:5000/
 ```
 
-## 7) Test Chromium in kiosk mode locally
+## 6) Test Chromium in kiosk mode locally
 
 Before enabling boot kiosk, validate Chromium launch on the LCD:
 
@@ -113,9 +104,9 @@ xinit /usr/bin/chromium --app=http://127.0.0.1:5000/ --disable-gpu --use-gl=swif
 
 Chromium should open on the LCD display. If it works, continue with kiosk automation.
 
-## 8) Configure kiosk autostart
+## 7) Configure kiosk autostart
 
-### 8.1 Login shell hook for tty1
+### 7.1 Login shell hook for tty1
 
 Append to ~/.profile (or equivalent login shell startup file):
 
@@ -125,7 +116,7 @@ if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && [ ! -f "$HOME/.no-kiosk" ]
 fi
 ```
 
-### 8.2 Create ~/.xinitrc
+### 7.2 Create ~/.xinitrc
 
 ```bash
 cat > ~/.xinitrc <<'EOF'
@@ -152,7 +143,7 @@ EOF
 chmod +x ~/.xinitrc
 ```
 
-### 8.3 Optional safety switch
+### 7.3 Optional safety switch
 
 Disable kiosk autostart temporarily:
 
@@ -166,7 +157,7 @@ Re-enable kiosk autostart:
 rm ~/.no-kiosk
 ```
 
-## 9) Reboot and confirm end-to-end
+## 8) Reboot and confirm end-to-end
 
 ```bash
 sudo reboot
@@ -177,7 +168,7 @@ After reboot, confirm:
 - Chromium kiosk opens on the LCD
 - UI is reachable and usable
 
-## 10) Optional USB safety tuning
+## 9) Optional USB safety tuning
 
 If you want automatic FAT32 repair/mount tuning:
 

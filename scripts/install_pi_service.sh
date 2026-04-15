@@ -15,9 +15,10 @@ if [[ ! -f "$SERVICE_TEMPLATE" ]]; then
 fi
 
 if [[ ! -d "$ROOT_DIR/venv" ]]; then
-  echo "Missing Python venv at $ROOT_DIR/venv"
-  echo "Create it first and install dependencies."
-  exit 1
+  echo "Creating Python venv at $ROOT_DIR/venv"
+  python3 -m venv "$ROOT_DIR/venv"
+  source "$ROOT_DIR/venv/bin/activate"
+  pip install -U pip
 fi
 
 if [[ ! -d "$ROOT_DIR/frontend" ]]; then
