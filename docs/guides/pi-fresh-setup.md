@@ -29,17 +29,14 @@ It is written for a minimal Raspberry Pi OS style install where you add only the
 3. Update packages:
 
 ```bash
-sudo apt update
-sudo apt full-upgrade -y
-sudo reboot
+sudo apt update && sudo apt full-upgrade -y
 ```
 
 ## 1) Install base packages
 
-After reboot:
+After reboot (if needed):
 
 ```bash
-sudo apt update
 sudo apt install -y \
   git curl \
   python3-venv python3-pip \
@@ -49,16 +46,13 @@ sudo apt install -y \
 
 ## 2) Install Node.js v24+
 
-VitePress and newer Vite require Node v24 or higher. Use the NodeSource binary distribution:
+ParsePlayer requires Node v24 or higher. The following command should work but is provided for convenience.
+
+[See here for full instructions](https://gist.github.com/stonehippo/f4ef8446226101e8bed3e07a58ea512a#install-with-apt-using-nodesource-binary-distribution)
 
 ```bash
-sudo apt install -y ca-certificates curl gnupg
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-sudo apt update
-sudo apt install -y nodejs
-node -v  # Verify version 24.x
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - &&\
+sudo apt-get install -y nodejs
 ```
 
 ## 3) Force Xorg to the SPI framebuffer
@@ -101,8 +95,7 @@ EOF
 Clone directly on Pi:
 
 ```bash
-cd ~
-git clone https://github.com/parsehex/ParsePlayer ParsePlayer
+git clone https://github.com/parsehex/ParsePlayer
 cd ~/ParsePlayer
 ```
 
@@ -111,8 +104,8 @@ cd ~/ParsePlayer
 Run the installer script:
 
 ```bash
-cd ~/ParsePlayer
 ./scripts/install_pi_service.sh
+./scripts/setup_safe_usb.sh
 ```
 
 This script:
@@ -144,14 +137,8 @@ Chromium should open on the LCD display. If it works, continue with kiosk automa
 Run:
 
 ```bash
-sudo raspi-config
+sudo raspi-config nonint do_boot_behaviour B2
 ```
-
-Then set:
-
-- `1 System Options`
-- `S5 Boot / Auto Login`
-- `B2 Console Autologin`
 
 Reboot after saving raspi-config changes:
 
@@ -168,6 +155,7 @@ After reboot, verify autologin is active on local tty1.
 Append to ~/.profile (or equivalent login shell startup file):
 
 ```sh
+# ParsePlayer
 if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && [ ! -f "$HOME/.no-kiosk" ]; then
   exec startx "$HOME/.xinitrc" -- :0 vt1 -keeptty
 fi
@@ -225,18 +213,7 @@ After reboot, confirm:
 - Chromium kiosk opens on the LCD
 - UI is reachable and usable
 
-## 11) Optional USB safety tuning
-
-If you want automatic FAT32 repair/mount tuning:
-
-```bash
-cd ~/ParsePlayer
-./scripts/setup_safe_usb.sh
-```
-
-Note: the script's generated udiskie service uses User=user by default. Change that line to your actual username if needed in /etc/systemd/system/udiskie.service.
-
-## 12) Boot splash (Plymouth, current status)
+## 11) Boot splash (Plymouth, current status + next try)
 
 This setup is partially working on the SPI LCD:
 - Plymouth starts and shows the ParsePlayer splash.
@@ -318,7 +295,45 @@ Current note:
 - Do not pin sprite to `0,0` yet; on this hardware it pushed the splash further off-screen.
 - Keep centered placement until panel-specific sizing is finalized.
 
-## 13) Optional: clear LCD on shutdown/reboot
+### Next try (recommended): geometry-safe splash image
+
+This approach avoids clipping by using a smaller logo centered on a panel-sized canvas before Plymouth renders it.
+
+```bash
+cd ~/ParsePlayer
+
+# Render a conservative logo size first.
+rsvg-convert -w 200 -h 120 resources/PEARL/parseplayer-splash.svg -o /tmp/parseplayer-logo.png
+
+# Build a panel-sized canvas and center the logo on it.
+convert -size 320x480 xc:'#9edd00' /tmp/parseplayer-logo.png -gravity center -composite /tmp/parseplayer-splash-safe.png
+
+sudo cp /tmp/parseplayer-splash-safe.png /usr/share/plymouth/themes/parseplayer/splash.png
+```
+
+Use the existing centered Plymouth script:
+
+```bash
+sudo tee /usr/share/plymouth/themes/parseplayer/parseplayer.script >/dev/null <<'EOF'
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+img = Image("splash.png");
+sprite = Sprite(img);
+sprite.SetX((screen_w - img.GetWidth()) / 2);
+sprite.SetY((screen_h - img.GetHeight()) / 2);
+EOF
+```
+
+Then rebuild and reboot:
+
+```bash
+sudo update-initramfs -u
+sudo reboot
+```
+
+If still clipped, reduce the logo render size further (for example `-w 160 -h 96`) and repeat.
+
+## 12) Optional: clear LCD on shutdown/reboot
 
 On this SPI setup, reboot/shutdown can leave the previous frame visible on the panel.
 
