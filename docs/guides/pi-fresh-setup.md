@@ -13,12 +13,19 @@ It is written for a minimal Raspberry Pi OS style install where you add only the
 
 ## 0) Flash and first boot
 
-1. Flash a new SD card with minimal Raspberry Pi OS.
-2. Boot the Pi and complete first-boot basics:
-   - hostname
-   - locale/timezone
-   - user account
-   - network
+1. Use the official Raspberry Pi Imager: https://www.raspberrypi.com/software/
+   - Select "OS → Raspberry Pi OS (other) → Raspberry Pi OS Lite"
+   - Click "Customize" and set:
+     - Hostname
+     - Locale/timezone
+     - Username and password
+     - WiFi (if needed)
+   - Before writing, open the Customization's "Edit File" feature to add to `/boot/firmware/config.txt`:
+     ```
+     dtoverlay=piscreen,speed=16000000
+     ```
+   - Write to SD card
+2. Boot the Pi and wait for yellow/green LED to settle before attempting SSH.
 3. Update packages:
 
 ```bash
@@ -37,92 +44,34 @@ sudo apt install -y \
   git curl \
   python3-venv python3-pip \
   xauth xinit xserver-xorg openbox unclutter x11-xserver-utils \
-  chromium-browser
+  chromium
 ```
 
-If your distro provides Chromium under a different package name, install that equivalent package.
+## 2) Install Node.js v24+
 
-## 2) Install the SPI display driver (GoodTFT)
+VitePress and newer Vite require Node v24 or higher. Use the NodeSource binary distribution:
 
-Driver source used for this setup:
-- goodtft/LCD-show
-- script used: MHS35-show
+```bash
+sudo apt install -y ca-certificates curl gnupg
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+sudo apt update
+sudo apt install -y nodejs
+node -v  # Verify version 24.x
+```
 
-Commands:
+## 3) Get ParsePlayer onto the Pi
+
+Clone directly on Pi:
 
 ```bash
 cd ~
-git clone https://github.com/goodtft/LCD-show.git
-cd LCD-show
-chmod +x MHS35-show
-sudo ./MHS35-show
-```
-
-Expect a reboot during/after driver install.
-
-## 3) Verify framebuffer mapping
-
-After reboot, verify the LCD device node:
-
-```bash
-cat /proc/fb
-```
-
-Expected working mapping in this setup:
-- fb0 = BCM2708 FB
-- fb1 = fb_ili9486 (the LCD panel)
-
-If this mapping is different on your device, adjust the next step accordingly.
-
-## 4) Force Xorg to LCD framebuffer
-
-Create Xorg config directory and file:
-
-```bash
-sudo mkdir -p /etc/X11/xorg.conf.d
-sudo tee /etc/X11/xorg.conf.d/99-fbdev.conf >/dev/null <<'EOF'
-Section "Device"
-    Identifier  "SPI Display"
-    Driver      "fbdev"
-    Option      "fbdev" "/dev/fb1"
-EndSection
-
-Section "Screen"
-    Identifier "Screen0"
-    Device     "SPI Display"
-EndSection
-EOF
-```
-
-## 5) Get ParsePlayer onto the Pi
-
-Choose one of the following.
-
-Option A: Clone directly on Pi
-
-```bash
-cd ~
-git clone <your-repo-url> ParsePlayer
+git clone https://github.com/parsehex/ParsePlayer ParsePlayer
 cd ~/ParsePlayer
 ```
 
-Option B: Rsync from your dev machine
-
-```bash
-rsync -avz \
-  --exclude '.git' \
-  --exclude 'venv/' \
-  --exclude '.venv/' \
-  --exclude 'data/' \
-  --exclude '__pycache__/' \
-  --exclude 'parseplayer/__pycache__/' \
-  --exclude 'node_modules/' \
-  --exclude 'frontend/node_modules/' \
-  --exclude 'dist/' \
-  . raspberrypi:~/ParsePlayer/
-```
-
-## 6) Create Python virtual environment
+## 4) Create Python virtual environment
 
 ```bash
 cd ~/ParsePlayer
@@ -131,7 +80,7 @@ source venv/bin/activate
 pip install -U pip
 ```
 
-## 7) Install ParsePlayer service
+## 5) Install ParsePlayer service
 
 Run the installer script:
 
@@ -147,26 +96,26 @@ This script:
 - installs and enables parseplayer.service
 - starts the service
 
-## 8) Verify backend service
+## 6) Verify backend service
 
 ```bash
 sudo systemctl status parseplayer --no-pager
 curl -I http://127.0.0.1:5000/
 ```
 
-## 9) Test local display manually first
+## 7) Test Chromium in kiosk mode locally
 
-Before enabling boot kiosk, validate local launch from console:
+Before enabling boot kiosk, validate Chromium launch on the LCD:
 
 ```bash
-xinit /usr/bin/chromium-browser --app=http://127.0.0.1:5000/ --disable-gpu --use-gl=swiftshader --no-first-run -- :0 vt1
+xinit /usr/bin/chromium --app=http://127.0.0.1:5000/ --disable-gpu --use-gl=swiftshader --no-first-run -- :0 vt1
 ```
 
-If this works, continue with kiosk automation.
+Chromium should open on the LCD display. If it works, continue with kiosk automation.
 
-## 10) Configure kiosk autostart
+## 8) Configure kiosk autostart
 
-### 10.1 Login shell hook for tty1
+### 8.1 Login shell hook for tty1
 
 Append to ~/.profile (or equivalent login shell startup file):
 
@@ -176,7 +125,7 @@ if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ] && [ ! -f "$HOME/.no-kiosk" ]
 fi
 ```
 
-### 10.2 Create ~/.xinitrc
+### 8.2 Create ~/.xinitrc
 
 ```bash
 cat > ~/.xinitrc <<'EOF'
@@ -190,7 +139,7 @@ until curl -fsS http://127.0.0.1:5000/ >/dev/null; do
   sleep 1
 done
 
-exec chromium-browser \
+exec chromium \
   --kiosk \
   --app=http://127.0.0.1:5000/ \
   --force-device-scale-factor=1 \
@@ -203,7 +152,7 @@ EOF
 chmod +x ~/.xinitrc
 ```
 
-### 10.3 Optional safety switch
+### 8.3 Optional safety switch
 
 Disable kiosk autostart temporarily:
 
@@ -217,7 +166,7 @@ Re-enable kiosk autostart:
 rm ~/.no-kiosk
 ```
 
-## 11) Reboot and confirm end-to-end
+## 9) Reboot and confirm end-to-end
 
 ```bash
 sudo reboot
@@ -228,7 +177,7 @@ After reboot, confirm:
 - Chromium kiosk opens on the LCD
 - UI is reachable and usable
 
-## 12) Optional USB safety tuning
+## 10) Optional USB safety tuning
 
 If you want automatic FAT32 repair/mount tuning:
 
@@ -241,10 +190,10 @@ Note: the script's generated udiskie service uses User=user by default. Change t
 
 ## Troubleshooting
 
-### Blank or wrong display target
+### LCD shows console framebuffer but Xorg/Chromium does not display
 
-- Run cat /proc/fb again and confirm which fb device is the LCD.
-- Update /etc/X11/xorg.conf.d/99-fbdev.conf to the correct /dev/fbX.
+- Confirm the dtoverlay line in /boot/firmware/config.txt is present and reboot.
+- Try running `fbset -s` to query current framebuffer state.
 
 ### ParsePlayer service does not start
 
