@@ -27,7 +27,9 @@ async function stopJob() {
       </article>
     </section>
 
-    <router-view />
+    <div class="app-view">
+      <router-view />
+    </div>
 
     <div v-if="store.busyMessage || (store.jobProgress && (store.jobProgress.status === 'running' || store.jobProgress.status === 'stopping'))" id="busy-overlay" class="busy-overlay">
       <div class="busy-panel" role="status" aria-live="polite" aria-atomic="true">

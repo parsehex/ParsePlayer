@@ -35,14 +35,16 @@ function resetBrowse() {
 
 <template>
   <div class="library-toolbar">
-    <label class="library-filter-field" for="library-filter">Search</label>
-    <input
-      id="library-filter"
-      type="search"
-      v-model="store.filterQuery"
-      placeholder="Filter by title, artist, or path"
-      autocomplete="off"
-    />
+    <div class="library-search-group">
+      <label class="library-filter-field" for="library-filter">Search</label>
+      <input
+        id="library-filter"
+        type="search"
+        v-model="store.filterQuery"
+        placeholder="Filter by title, artist, or path"
+        autocomplete="off"
+      />
+    </div>
     <button @click="resetBrowse" class="outline">All Tracks</button>
     <div class="library-bulk-all">
       <button @click="bulkUpdate('select')" class="outline">Select All</button>

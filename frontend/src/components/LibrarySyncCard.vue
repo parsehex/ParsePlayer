@@ -58,25 +58,25 @@ async function handleAction(endpoint: string, message: string) {
 <template>
   <article class="dashboard-card compact-card library-sync-card">
     <div class="section-header">
-      <h2>Library + Sync</h2>
+      <h2>Actions</h2>
     </div>
-    <p class="sync-summary">
-      <strong id="selected-count">{{ store.selectedCount }}</strong> selected
-      <span class="summary-sep">|</span>
-      <strong id="selected-size">{{ store.selectedSizeHuman }}</strong>
-    </p>
     <div class="action-stack compact-actions">
       <button @click="handleAction('import-library-input', 'Importing music from USB. This can take a while for large libraries...')" class="secondary">
-        Import From USB
+        Import
       </button>
       <button @click="handleAction('sync-mp3', 'Syncing to MP3 player...')">
-        Sync to MP3
+        Sync
       </button>
       <button @click="handleAction('backup-library', 'Backing up your library to USB. Keep this page open until it completes...')" class="secondary">
-        Back Up Library
+        Backup
       </button>
       <router-link to="/settings" custom v-slot="{ navigate }">
-        <button @click="navigate" class="outline">Settings</button>
+        <button @click="navigate" class="outline settings-icon-btn" aria-label="Settings" title="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
       </router-link>
     </div>
   </article>
