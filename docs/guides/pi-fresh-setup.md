@@ -234,14 +234,13 @@ sudo mkdir -p /usr/share/plymouth/themes/parseplayer
 
 ### Build splash image
 
-Render the SVG to match your framebuffer size (480x320 for the SPI panel):
+Copy the pre-rendered splash PNG to the theme directory:
 
 ```bash
 cd ~/ParsePlayer
 
-rsvg-convert -w 480 -h 320 resources/PEARL/parseplayer-splash.svg -o /tmp/parseplayer-splash.png
-
-sudo cp /tmp/parseplayer-splash.png /usr/share/plymouth/themes/parseplayer/splash.png
+sudo mkdir -p /usr/share/plymouth/themes/parseplayer
+sudo cp resources/PEARL/parseplayer-splash.png /usr/share/plymouth/themes/parseplayer/splash.png
 ```
 
 ### Create theme definition file

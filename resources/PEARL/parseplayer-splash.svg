@@ -13,7 +13,7 @@
     </filter>
     <style>
       .gem { stroke: #143700; fill: none; stroke-linejoin: miter; filter: url(#glow); }
-      .name { font-family: "VT323", "Courier New", monospace; fill: #103100; letter-spacing: 10px; }
+      .name { font-family: 'VT323', "Courier New", monospace; fill: #103100; letter-spacing: 3px; }
       .sub { font-family: "VT323", "Courier New", monospace; fill: #245200; letter-spacing: 3px; }
     </style>
   </defs>
@@ -33,6 +33,6 @@
     <line class="gem" x1="61" y1="72" x2="16" y2="72" stroke-width="1.2"/>
   </g>
 
-  <text x="320" y="300" text-anchor="middle" class="name" font-size="58">PARSEPLAYER</text>
+  <text x="320" y="300" text-anchor="middle" class="name" font-size="58"><tspan font-size="80">P</tspan>ARSE<tspan font-size="80">P</tspan>LAYER</text>
   <text x="320" y="338" text-anchor="middle" class="sub" font-size="24">MUSIC SYNC CONSOLE</text>
 </svg>
