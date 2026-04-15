@@ -64,6 +64,27 @@ body {
   min-height: 100vh;
 }
 
+/* Kiosk touch behavior: prevent accidental text selection/highlight drags. */
+html,
+body,
+#app,
+main.container,
+.app-view {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keep text controls usable where selecting/editing text is expected. */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* ── main.container = the LCD screen panel ── */
 main.container {
   background-color: var(--lcd-bg);
