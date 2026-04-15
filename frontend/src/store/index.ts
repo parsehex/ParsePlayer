@@ -7,6 +7,10 @@ interface SyncGroup {
   total: number;
   selected: number;
   is_active: boolean;
+  size_bytes?: number;
+  size_human?: string;
+  selected_size_bytes?: number;
+  selected_size_human?: string;
 }
 
 interface Track {

@@ -9,9 +9,10 @@ watchman-make -p '**/*' --run "rsync -avz \
 	--exclude '.git' \
 	--exclude 'venv/' \
 	--exclude '.venv/' \
+	--exclude 'data/' \
 	--exclude '__pycache__/' \
 	--exclude 'parseplayer/__pycache__/' \
 	--exclude 'node_modules/' \
 	--exclude 'frontend/node_modules/' \
-	--exclude 'frontend/dist/' \
+	--exclude 'dist/' \
 	. ${HOST}:~/ParsePlayer/"
