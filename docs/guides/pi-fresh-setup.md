@@ -236,6 +236,138 @@ cd ~/ParsePlayer
 
 Note: the script's generated udiskie service uses User=user by default. Change that line to your actual username if needed in /etc/systemd/system/udiskie.service.
 
+## 12) Boot splash (Plymouth, current status)
+
+This setup is partially working on the SPI LCD:
+- Plymouth starts and shows the ParsePlayer splash.
+- Orientation appears correct.
+- Current open issue: splash image sizing/placement is clipped on panel edges.
+
+Use this as the known-good baseline for now.
+
+Install dependencies:
+
+```bash
+sudo apt update
+sudo apt install -y plymouth plymouth-themes imagemagick librsvg2-bin initramfs-tools
+```
+
+Create theme assets:
+
+```bash
+cd ~/ParsePlayer
+rsvg-convert -w 640 -h 384 resources/PEARL/parseplayer-splash.svg -o /tmp/parseplayer-splash.png
+
+sudo mkdir -p /usr/share/plymouth/themes/parseplayer
+sudo cp /tmp/parseplayer-splash.png /usr/share/plymouth/themes/parseplayer/splash.png
+```
+
+Create theme files:
+
+```bash
+sudo tee /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth >/dev/null <<'EOF'
+[Plymouth Theme]
+Name=ParsePlayer
+Description=ParsePlayer boot splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/parseplayer
+ScriptFile=/usr/share/plymouth/themes/parseplayer/parseplayer.script
+EOF
+```
+
+```bash
+sudo tee /usr/share/plymouth/themes/parseplayer/parseplayer.script >/dev/null <<'EOF'
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+img = Image("splash.png");
+sprite = Sprite(img);
+sprite.SetX((screen_w - img.GetWidth()) / 2);
+sprite.SetY((screen_h - img.GetHeight()) / 2);
+EOF
+```
+
+Enable theme (use absolute link path):
+
+```bash
+sudo update-alternatives --install /usr/share/plymouth/themes/default.plymouth default.plymouth /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth 100
+sudo update-alternatives --set default.plymouth /usr/share/plymouth/themes/parseplayer/parseplayer.plymouth
+```
+
+Force Plymouth to SPI framebuffer:
+
+```bash
+sudo tee /etc/plymouth/plymouthd.conf >/dev/null <<'EOF'
+[Daemon]
+Theme=parseplayer
+DeviceTimeout=8
+ShowDelay=0
+Framebuffer=/dev/fb1
+EOF
+```
+
+Ensure `/boot/firmware/cmdline.txt` includes `quiet splash` (single-line file), then rebuild initramfs and reboot:
+
+```bash
+sudo update-initramfs -u
+sudo reboot
+```
+
+Current note:
+- Do not pin sprite to `0,0` yet; on this hardware it pushed the splash further off-screen.
+- Keep centered placement until panel-specific sizing is finalized.
+
+## 13) Optional: clear LCD on shutdown/reboot
+
+On this SPI setup, reboot/shutdown can leave the previous frame visible on the panel.
+
+This service clears `/dev/fb1` during shutdown/reboot so the screen goes black cleanly.
+
+Create clear script:
+
+```bash
+sudo tee /usr/local/bin/clear-fb1.sh >/dev/null <<'EOF'
+#!/usr/bin/env sh
+FB=/dev/fb1
+SYS=/sys/class/graphics/fb1
+
+if [ -e "$FB" ] && [ -r "$SYS/virtual_size" ] && [ -r "$SYS/bits_per_pixel" ]; then
+  IFS=, read -r W H < "$SYS/virtual_size"
+  BPP=$(cat "$SYS/bits_per_pixel")
+  SIZE=$((W * H * BPP / 8))
+  dd if=/dev/zero of="$FB" bs="$SIZE" count=1 status=none || true
+fi
+EOF
+
+sudo chmod +x /usr/local/bin/clear-fb1.sh
+```
+
+Create shutdown service:
+
+```bash
+sudo tee /etc/systemd/system/clear-fb1-on-shutdown.service >/dev/null <<'EOF'
+[Unit]
+Description=Clear SPI framebuffer on shutdown/reboot
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/clear-fb1.sh
+
+[Install]
+WantedBy=shutdown.target reboot.target halt.target
+EOF
+```
+
+Enable service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable clear-fb1-on-shutdown.service
+```
+
 ## Troubleshooting
 
 ### LCD shows console framebuffer but Xorg/Chromium does not display
