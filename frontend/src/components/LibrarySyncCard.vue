@@ -35,7 +35,7 @@ async function pollProgress() {
 async function handleAction(endpoint: string, message: string) {
   store.busyMessage = message;
   store.jobProgress = { status: 'running', message: message, percentage: 0, completed: 0, total: 0 };
-  
+
   try {
     const response = await axios.post(`/api/actions/${endpoint}`);
     if (response.data.success) {

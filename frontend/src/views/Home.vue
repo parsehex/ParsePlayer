@@ -39,12 +39,12 @@ async function fetchData() {
   try {
     const artist = (route.query.artist as string) || ''
     const album = (route.query.album as string) || ''
-    
+
     const [tracksRes, usbRes] = await Promise.all([
       axios.get('/api/tracks', { params: { artist, album } }),
       axios.get('/api/usb')
     ])
-    
+
     store.tracks = tracksRes.data.tracks
     store.allTrackCount = tracksRes.data.allTrackCount
     store.artistGroups = tracksRes.data.artistGroups
@@ -53,7 +53,7 @@ async function fetchData() {
     store.activeAlbum = tracksRes.data.activeAlbum
     store.selectedCount = tracksRes.data.selectedCount
     store.selectedSizeHuman = tracksRes.data.selectedSizeHuman
-    
+
     store.usbDevices = usbRes.data.devices
     store.usbRoles = usbRes.data.roles
   } catch (error) {
