@@ -183,7 +183,8 @@ exec chromium \
   --use-gl=swiftshader \
   --no-first-run \
   --disable-pinch \
-  --overscroll-history-navigation=0
+  --overscroll-history-navigation=0 \
+  --bgcolor='#9edd00'
 EOF
 chmod +x ~/.xinitrc
 ```

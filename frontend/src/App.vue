@@ -2,6 +2,7 @@
 import { store } from './store'
 import axios from 'axios'
 import PearlLogo from './components/PearlLogo.vue'
+import BootLoadingScreen from './components/BootLoadingScreen.vue'
 
 async function stopJob() {
   try {
@@ -13,6 +14,7 @@ async function stopJob() {
 </script>
 
 <template>
+  <BootLoadingScreen />
   <main class="container">
     <header class="page-header">
       <PearlLogo />
