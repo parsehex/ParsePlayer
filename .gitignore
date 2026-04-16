@@ -162,3 +162,5 @@ cython_debug/
 /node_modules
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+
+*.heic

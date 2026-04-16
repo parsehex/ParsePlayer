@@ -31,7 +31,33 @@ npm run docs:build
 
 Primary runbook for rebuilding a fresh Pi SD card:
 
-- `docs/guides/pi-fresh-setup.md`
+- [`docs/guides/pi-fresh-setup.md`](https://parsehex.github.io/ParsePlayer/guides/pi-fresh-setup)
+
+If you are handing this project off, start there for the end-to-end rebuild path.
+
+## Current hardware context
+
+The current build centers on three pieces of hardware:
+
+- An RCA `PEARL` MP3 player that motivated the project.
+- A Raspberry Pi 4 B as the current desktop-style base unit.
+- An off-the-shelf case + SPI touchscreen used for the local kiosk display.
+
+Reference photos for the current build live in `resources/ParsePlayer/`:
+
+![RCA PEARL](resources/ParsePlayer/rca-pearl.jpg)
+
+![Case with top removed](resources/ParsePlayer/case-top-off.jpg)
+
+![Assembled case](resources/ParsePlayer/assembled-case.jpg)
+
+The photos in `resources/ParsePlayer/Display booklet/` are product-booklet reference images for the third-party case/display hardware. They are there to document the physical build context, not to describe ParsePlayer itself.
+
+For the shortest "what works now" to "how do I recreate it" path:
+
+- Start with `docs/guides/pi-fresh-setup.md` for a blank-SD-card rebuild.
+- Use `scripts/install_pi_service.sh` for the one-time Pi service install.
+- Use `scripts/rebuild_prod.sh` for day-to-day Pi updates.
 
 ## What this first version does
 
@@ -113,7 +139,7 @@ Before enabling boot-to-kiosk, first prove the display path locally on the Pi it
 curl -I http://127.0.0.1:5000/
 ```
 
-2. Start Chromium directly on the attached display:
+1. Start Chromium directly on the attached display:
 
 ```bash
 xinit /usr/bin/chromium-browser --app=http://127.0.0.1:5000/ --disable-gpu --use-gl=swiftshader --no-first-run -- :0 vt1

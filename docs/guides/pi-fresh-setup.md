@@ -11,9 +11,20 @@ It is written for a minimal Raspberry Pi OS style install where you add only the
 - Chromium launches in kiosk mode on boot
 - USB import/sync workflow is available in the app UI
 
+## Hardware reference material
+
+Repo-side build reference assets live under `resources/ParsePlayer/`:
+
+- `assembled-case.jpg` shows the assembled Pi case/display enclosure.
+- `case-top-off.jpg` shows the display stack with the top removed.
+- `rca-pearl.jpg` is the current clean reference shot of the motivating MP3 player.
+- `Display booklet/` contains product-booklet photos for the third-party case/display hardware.
+
+Those booklet images are assembly context for the off-the-shelf hardware, not ParsePlayer project documentation.
+
 ## 0) Flash and first boot
 
-1. Use the official Raspberry Pi Imager: https://www.raspberrypi.com/software/
+1. Use the official Raspberry Pi Imager: <https://www.raspberrypi.com/software/>
    - Select "OS → Raspberry Pi OS (other) → Raspberry Pi OS Lite"
    - Click "Customize" and set:
      - Hostname
@@ -21,9 +32,11 @@ It is written for a minimal Raspberry Pi OS style install where you add only the
      - Username and password
      - WiFi (if needed)
    - Before writing, open the Customization's "Edit File" feature to add to `/boot/firmware/config.txt`:
-     ```
+
+     ```text
      dtoverlay=piscreen,speed=16000000
      ```
+
    - Write to SD card
 2. Boot the Pi and wait for yellow/green LED to settle before attempting SSH.
 3. Update packages:
@@ -109,6 +122,7 @@ Run the installer script:
 ```
 
 This script:
+
 - installs frontend dependencies
 - builds frontend assets
 - installs Python dependencies
@@ -210,6 +224,7 @@ sudo reboot
 ```
 
 After reboot, confirm:
+
 - ParsePlayer service is active
 - Chromium kiosk opens on the LCD
 - UI is reachable and usable
@@ -306,7 +321,7 @@ sudo nano /boot/firmware/cmdline.txt
 
 Ensure it includes:
 
-```
+```text
 splash plymouth.ignore-serial-consoles
 ```
 
