@@ -1,5 +1,7 @@
 # ParsePlayer
 
+<!-- No AI of any sort is allowed to edit this file -->
+
 This is a purpose-built app meant for managing MP3 players + a collection of music, and the sooner-than-later-but-eventual home for the Raspberry Pi-based player(s) that I'm building for the same roundabout purpose.
 
 Follow along and I'll try to explain.
