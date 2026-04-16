@@ -166,7 +166,7 @@ If you see empty/black space to the right, remove hard `--window-size` and `--wi
 
 ### Pi boot splash branding
 
-This repo includes a splash asset at `resources/PEARL/parseplayer-splash.svg` that matches the app header logo + name.
+This repo includes a splash asset at `resources/parseplayer-splash.svg` that matches the app header logo + name.
 
 For the full Plymouth boot splash setup on Raspberry Pi, see [the fresh setup guide](docs/guides/pi-fresh-setup.md#11-boot-splash-plymouth).
 

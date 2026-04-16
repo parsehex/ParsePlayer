@@ -240,7 +240,7 @@ Copy the pre-rendered splash PNG to the theme directory:
 cd ~/ParsePlayer
 
 sudo mkdir -p /usr/share/plymouth/themes/parseplayer
-sudo cp resources/PEARL/parseplayer-splash.png /usr/share/plymouth/themes/parseplayer/splash.png
+sudo cp resources/parseplayer-splash.png /usr/share/plymouth/themes/parseplayer/splash.png
 ```
 
 ### Create theme definition file
