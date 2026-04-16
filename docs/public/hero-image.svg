@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Outer ring -->
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#9edd00" stroke-width="4" opacity="0.3"/>
+  <!-- Vinyl record body -->
+  <circle cx="100" cy="100" r="80" fill="#1a1a1a"/>
+  <!-- Grooves -->
+  <circle cx="100" cy="100" r="68" fill="none" stroke="#9edd00" stroke-width="1" opacity="0.15"/>
+  <circle cx="100" cy="100" r="56" fill="none" stroke="#9edd00" stroke-width="1" opacity="0.15"/>
+  <circle cx="100" cy="100" r="44" fill="none" stroke="#9edd00" stroke-width="1" opacity="0.15"/>
+  <!-- Label area -->
+  <circle cx="100" cy="100" r="32" fill="#9edd00" opacity="0.9"/>
+  <!-- Center hole -->
+  <circle cx="100" cy="100" r="6" fill="#1a1a1a"/>
+  <!-- Play triangle -->
+  <polygon points="90,88 90,112 116,100" fill="#0d1117"/>
+  <!-- Raspberry Pi chip hint (bottom right) -->
+  <rect x="130" y="130" width="40" height="40" rx="4" fill="#cc2030" opacity="0.8"/>
+  <rect x="136" y="136" width="28" height="28" rx="2" fill="#1a1a1a"/>
+  <text x="150" y="155" text-anchor="middle" fill="#9edd00" font-size="10" font-family="monospace" font-weight="bold">Pi</text>
+</svg>

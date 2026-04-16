@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="384" viewBox="0 0 640 384" role="img" aria-label="ParsePlayer splash">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b6e000" />
+      <stop offset="100%" stop-color="#8ab900" />
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .gem { stroke: #143700; fill: none; stroke-linejoin: miter; filter: url(#glow); }
+      .name { font-family: 'VT323', "Courier New", monospace; fill: #103100; letter-spacing: 3px; }
+      .sub { font-family: "VT323", "Courier New", monospace; fill: #245200; letter-spacing: 3px; }
+    </style>
+  </defs>
+
+  <rect width="640" height="384" fill="url(#bg)" />
+
+  <g transform="translate(188 35) scale(2.1)">
+    <polygon class="gem" points="38,6 78,4 108,24 114,52 94,88 52,92 16,72 8,40" stroke-width="3.2"/>
+    <line class="gem" x1="8" y1="52" x2="114" y2="52" stroke-width="2"/>
+    <line class="gem" x1="38" y1="6" x2="61" y2="28" stroke-width="1.6"/>
+    <line class="gem" x1="78" y1="4" x2="61" y2="28" stroke-width="1.6"/>
+    <line class="gem" x1="61" y1="28" x2="108" y2="24" stroke-width="1.2"/>
+    <line class="gem" x1="61" y1="28" x2="8" y2="40" stroke-width="1.2"/>
+    <line class="gem" x1="52" y1="92" x2="61" y2="72" stroke-width="1.6"/>
+    <line class="gem" x1="94" y1="88" x2="61" y2="72" stroke-width="1.6"/>
+    <line class="gem" x1="61" y1="72" x2="114" y2="52" stroke-width="1.2"/>
+    <line class="gem" x1="61" y1="72" x2="16" y2="72" stroke-width="1.2"/>
+  </g>
+
+  <text x="320" y="300" text-anchor="middle" class="name" font-size="58"><tspan font-size="80">P</tspan>ARSE<tspan font-size="80">P</tspan>LAYER</text>
+  <text x="320" y="338" text-anchor="middle" class="sub" font-size="24">MUSIC SYNC CONSOLE</text>
+</svg>

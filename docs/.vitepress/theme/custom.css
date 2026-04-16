@@ -1,0 +1,67 @@
+/* VT323 retro font — matches splash screen */
+.VPHero .name,
+.VPHero .text {
+  font-family: 'VT323', 'Courier New', monospace !important;
+  letter-spacing: 3px;
+}
+
+/* ParsePlayer brand colors */
+:root {
+  --vp-c-brand-1: #7cc400;
+  --vp-c-brand-2: #9edd00;
+  --vp-c-brand-3: #b5f020;
+  --vp-c-brand-soft: rgba(158, 221, 0, 0.14);
+
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-bg: var(--vp-c-brand-3);
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: #0d1117;
+  --vp-button-brand-hover-text: #0d1117;
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #7cc400 30%, #c8ff3e);
+  --vp-home-hero-image-background-image: radial-gradient(
+    ellipse at center,
+    rgba(158, 221, 0, 0.25) 0%,
+    transparent 70%
+  );
+  --vp-home-hero-image-filter: drop-shadow(0 0 32px rgba(158, 221, 0, 0.5));
+}
+
+.dark {
+  --vp-c-brand-1: #9edd00;
+  --vp-c-brand-2: #b5f020;
+  --vp-c-brand-3: #c8ff3e;
+  --vp-c-brand-soft: rgba(158, 221, 0, 0.16);
+}
+
+/* Hero tagline */
+.VPHero .tagline {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+/* Enlarge hero image so the splash text is legible; fade all four edges */
+.VPHero .image-container img {
+  max-width: 420px;
+  width: 100%;
+  -webkit-mask-image:
+    linear-gradient(to right,  transparent  0%, black 12%, black 88%, transparent 100%),
+    linear-gradient(to bottom, transparent  0%, black  8%, black 92%, transparent 100%);
+  mask-image:
+    linear-gradient(to right,  transparent  0%, black 12%, black 88%, transparent 100%),
+    linear-gradient(to bottom, transparent  0%, black  8%, black 92%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* Feature icons are rendered as emoji — give them breathing room */
+.VPFeature .icon {
+  font-size: 2rem;
+}
+
+/* Subtle code block tweak */
+.vp-doc [class*='language-'] {
+  border-radius: 10px;
+}

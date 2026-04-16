@@ -1,24 +1,20 @@
-# ParsePlayer Docs
+---
+layout: home
 
-Reproducible setup and operations docs for running ParsePlayer on Raspberry Pi.
-
-## Start Here
-
-- Fresh device setup: [Fresh Pi Setup](./guides/pi-fresh-setup.md)
-- Day-to-day code updates: [Update Workflow](./guides/update-workflow.md)
-
-## Local Docs Preview
-
-```bash
-npm install
-npm run docs:dev
-```
-
-Open the local URL printed by VitePress.
-
-## Docs Build
-
-```bash
-npm run docs:build
-npm run docs:preview
-```
+hero:
+  name: ParsePlayer
+  text: for Raspberry Pi
+  tagline: Work-In-Progress
+  image:
+    src: /parseplayer-splash.svg
+    alt: ParsePlayer
+  actions:
+    - theme: brand
+      text: Fresh Pi Setup
+      link: /guides/pi-fresh-setup
+    - theme: alt
+      text: Update Workflow
+      link: /guides/update-workflow
+    - theme: alt
+      text: GitHub
+      link: https://github.com/parsehex/ParsePlayer

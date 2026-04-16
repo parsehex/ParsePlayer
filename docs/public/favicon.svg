@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="5" fill="#9edd00"/>
+  <!-- gem from splash, scaled 0.264 and centered vertically -->
+  <g transform="translate(0, 3.5) scale(0.264)">
+    <polygon fill="none" stroke="#143700" stroke-width="4" stroke-linejoin="miter"
+             points="38,6 78,4 108,24 114,52 94,88 52,92 16,72 8,40"/>
+    <line stroke="#143700" stroke-width="3"   x1="8"  y1="52" x2="114" y2="52"/>
+    <line stroke="#143700" stroke-width="2.5" x1="38" y1="6"  x2="61"  y2="28"/>
+    <line stroke="#143700" stroke-width="2.5" x1="78" y1="4"  x2="61"  y2="28"/>
+    <line stroke="#143700" stroke-width="2"   x1="61" y1="28" x2="108" y2="24"/>
+    <line stroke="#143700" stroke-width="2"   x1="61" y1="28" x2="8"   y2="40"/>
+    <line stroke="#143700" stroke-width="2.5" x1="52" y1="92" x2="61"  y2="72"/>
+    <line stroke="#143700" stroke-width="2.5" x1="94" y1="88" x2="61"  y2="72"/>
+    <line stroke="#143700" stroke-width="2"   x1="61" y1="72" x2="114" y2="52"/>
+    <line stroke="#143700" stroke-width="2"   x1="61" y1="72" x2="16"  y2="72"/>
+  </g>
+</svg>
