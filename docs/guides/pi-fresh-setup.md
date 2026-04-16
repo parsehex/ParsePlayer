@@ -317,13 +317,9 @@ sudo update-initramfs -u
 sudo reboot
 ```
 
-Plymouth should now display the ParsePlayer splash on the SPI LCD at boot
-sudo reboot
-```
+Plymouth should now display the ParsePlayer splash on the SPI LCD at boot.
 
-If still clipped, reduce the logo render size further (for example `-w 160 -h 96`) and repeat.
-
-## 12) Optional: clear LCD on shutdown/reboot
+### 12) Optional: clear LCD on shutdown/reboot
 
 On this SPI setup, reboot/shutdown can leave the previous frame visible on the panel.
 
